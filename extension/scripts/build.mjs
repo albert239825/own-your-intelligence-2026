@@ -41,6 +41,7 @@ await build({
 
 await cp(join(root, "manifest.json"), join(dist, "manifest.json"));
 await cp(join(root, "src/options/options.html"), join(dist, "options.html"));
+await cp(join(root, "src/options/options.css"), join(dist, "options.css"));
 await cp(join(root, "src/popup/popup.html"), join(dist, "popup.html"));
 await cp(join(root, "fixtures"), join(dist, "fixtures"), { recursive: true });
 
