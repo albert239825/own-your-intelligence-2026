@@ -7,7 +7,6 @@ import {
   type Rule,
 } from "../contracts";
 import {
-  AGGRESSIVENESS_THRESHOLDS,
   applyAggressiveness,
   buildExport,
   DEFAULT_SETTINGS,
@@ -94,9 +93,9 @@ function draftPolicy(prefix: "ob" | "st"): Policy {
 // ---- shared widgets ---------------------------------------------------------
 
 const AGGR_HINTS: Record<Aggressiveness, string> = {
-  cautious: "Cautious hides only when the model is very sure (95%)",
-  balanced: "Balanced hides when the model is fairly sure (85%)",
-  aggressive: "Aggressive hides even on weaker signals (70%)",
+  cautious: "Cautious: hides only when the model is very sure (defaults +10%)",
+  balanced: "Balanced: the default thresholds (85\u201390%)",
+  aggressive: "Aggressive: hides on weaker signals (defaults \u221215%)",
 };
 
 function renderAggControl(seg: HTMLElement, hintEl: HTMLElement, onChange: () => void): void {
@@ -154,40 +153,6 @@ function thresholdSlider(rule: Rule, onChange: () => void): HTMLElement {
   sync();
   wrap.append(slider, readout);
   return wrap;
-}
-
-function ruleEditorRow(rule: Rule, onChange: () => void, opts: { compact?: boolean } = {}): HTMLElement {
-  const div = el("div", { class: "card" });
-  const head = el("label");
-  const cb = el("input", { type: "checkbox" }) as HTMLInputElement;
-  cb.checked = rule.enabled;
-  cb.addEventListener("change", () => {
-    if (rule.hideThreshold === undefined) setExceptionEnabled(draftRules, rule.id, cb.checked);
-    else rule.enabled = cb.checked;
-    onChange();
-  });
-  head.append(cb, ` ${rule.title}`);
-  const blurb = RULE_BLURBS[rule.id];
-  div.append(head);
-  if (blurb) {
-    div.append(el("div", { class: "muted" }, `Catches: ${blurb.catches}`));
-    div.append(el("div", { class: "muted" }, `Spares: ${blurb.spares}`));
-  }
-  if (rule.hideThreshold !== undefined) {
-    div.append(thresholdSlider(rule, onChange));
-  } else {
-    div.append(el("div", { class: "muted" }, "exception"));
-  }
-  if (!opts.compact) {
-    const ta = el("textarea") as HTMLTextAreaElement;
-    ta.value = rule.instruction;
-    ta.addEventListener("input", () => {
-      rule.instruction = ta.value;
-      onChange();
-    });
-    div.append(ta);
-  }
-  return div;
 }
 
 interface ModelInputs {
@@ -617,8 +582,9 @@ async function renderReview(): Promise<void> {
       });
       return b;
     };
-    actions.append(mkFeedback("Shouldn't have been hidden", "keep"), " ");
-    if (r.disposition === "uncertain") {
+    if (r.disposition === "hide") {
+      actions.append(mkFeedback("Shouldn't have been hidden", "keep"));
+    } else {
       actions.append(mkFeedback("Should've been hidden", "hide"));
     }
     card.append(actions);
@@ -660,8 +626,8 @@ $("st-save").addEventListener("click", () => void saveSettings());
 $("st-reonboard").addEventListener("click", async () => {
   settings.onboarded = false;
   await chrome.storage.local.set({ settings });
-  location.hash = "#onboarding";
-  await route();
+  if (location.hash === "#onboarding") await route();
+  else location.hash = "#onboarding";
 });
 $("st-export").addEventListener("click", () => void exportJson());
 $("rv-export").addEventListener("click", () => void exportJson());

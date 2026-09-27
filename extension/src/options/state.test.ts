@@ -45,14 +45,24 @@ describe("disabled rule", () => {
 });
 
 describe("aggressiveness", () => {
-  it("apply/detect round trips and leaves exception-only rule untouched", () => {
+  it("DEFAULT_POLICY detects as balanced", () => {
+    expect(detectAggressiveness(DEFAULT_POLICY)).toBe("balanced");
+  });
+
+  it("apply/detect round trips relative to defaults; exception-only rule untouched", () => {
     const p = applyAggressiveness(DEFAULT_POLICY, "cautious");
     expect(detectAggressiveness(p)).toBe("cautious");
     const crit = p.rules.find((r) => r.id === "substantive_critique")!;
     expect(crit.hideThreshold).toBeUndefined();
-    for (const r of p.rules.filter((r) => r.hideThreshold !== undefined)) {
-      expect(r.hideThreshold).toBe(0.95);
-    }
+    const t = (id: string) => p.rules.find((r) => r.id === id)!.hideThreshold;
+    expect(t("rage_bait")).toBeCloseTo(0.95);
+    expect(t("hype")).toBeCloseTo(0.95);
+    expect(t("engagement_farming")).toBeCloseTo(0.99); // 0.90 + 0.10 capped
+    const aggr = applyAggressiveness(DEFAULT_POLICY, "aggressive");
+    const ta = (id: string) => aggr.rules.find((r) => r.id === id)!.hideThreshold;
+    expect(ta("rage_bait")).toBeCloseTo(0.7);
+    expect(ta("engagement_farming")).toBeCloseTo(0.75);
+    expect(detectAggressiveness(aggr)).toBe("aggressive");
   });
 
   it("detects custom when one threshold differs", () => {

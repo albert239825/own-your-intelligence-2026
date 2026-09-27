@@ -79,10 +79,6 @@ nav.top .spacer { flex: 1; }
 
 .cols { display: grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: start; }
 .preview { position: sticky; top: 16px; }
-.sticky-foot {
-  position: sticky; bottom: 0; background: var(--bg);
-  padding: 12px 0; border-top: 1px solid var(--border);
-}
 .step-num {
   display: inline-block; width: 22px; height: 22px; border-radius: 50%;
   background: var(--accent); color: #fff; text-align: center;

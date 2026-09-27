@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   CUSTOM_RULE_ID,
+  DEFAULT_POLICY,
   EXTRACTOR_VERSION,
   FeedbackSchema,
   OverrideSchema,
@@ -33,36 +34,56 @@ export const DEFAULT_SETTINGS: Settings = {
 };
 
 export type Aggressiveness = "cautious" | "balanced" | "aggressive";
-export const AGGRESSIVENESS_THRESHOLDS: Record<Aggressiveness, number> = {
-  cautious: 0.95,
-  balanced: 0.85,
-  aggressive: 0.7,
-};
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Presets are relative to each rule's default threshold (DEFAULT_POLICY,
+ * fallback 0.85 for ids unknown there): cautious = base + 0.10 (cap 0.99),
+ * balanced = base, aggressive = base - 0.15 (floor 0.5).
+ */
+export function presetThreshold(ruleId: string, a: Aggressiveness): number {
+  const base =
+    DEFAULT_POLICY.rules.find((r) => r.id === ruleId)?.hideThreshold ?? 0.85;
+  switch (a) {
+    case "cautious":
+      return Math.min(0.99, round2(base + 0.1));
+    case "balanced":
+      return base;
+    case "aggressive":
+      return Math.max(0.5, round2(base - 0.15));
+  }
+}
 
 /** Rules that carry a hideThreshold (exception-only rules excluded). */
 function thresholdRules(policy: Policy): Rule[] {
   return policy.rules.filter((r) => r.hideThreshold !== undefined);
 }
 
-/** Returns the preset whose threshold every enabled hide rule matches, else "custom". */
+/** Returns the preset whose threshold every enabled hide rule matches (within 0.005), else "custom". */
 export function detectAggressiveness(policy: Policy): Aggressiveness | "custom" {
   const rules = thresholdRules(policy).filter((r) => r.enabled);
-  for (const [name, t] of Object.entries(AGGRESSIVENESS_THRESHOLDS) as [
-    Aggressiveness,
-    number,
-  ][]) {
-    if (rules.length > 0 && rules.every((r) => r.hideThreshold === t)) return name;
+  for (const name of ["cautious", "balanced", "aggressive"] as Aggressiveness[]) {
+    if (
+      rules.length > 0 &&
+      rules.every(
+        (r) => Math.abs((r.hideThreshold ?? 0) - presetThreshold(r.id, name)) <= 0.005,
+      )
+    ) {
+      return name;
+    }
   }
   return "custom";
 }
 
-/** Sets hideThreshold on every rule that has one. Pure, returns new Policy (same revision). */
+/** Sets hideThreshold per rule via presetThreshold. Pure, returns new Policy (same revision). */
 export function applyAggressiveness(policy: Policy, a: Aggressiveness): Policy {
-  const t = AGGRESSIVENESS_THRESHOLDS[a];
   return {
     ...policy,
     rules: policy.rules.map((r) =>
-      r.hideThreshold === undefined ? r : { ...r, hideThreshold: t },
+      r.hideThreshold === undefined
+        ? r
+        : { ...r, hideThreshold: presetThreshold(r.id, a) },
     ),
   };
 }
