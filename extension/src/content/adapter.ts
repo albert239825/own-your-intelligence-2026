@@ -53,6 +53,7 @@ export function ensureStyle(): void {
   style.textContent = `
     .${AF_COLLAPSED} > *:not([${AF_OWNED}]) { display: none !important; }
     .${AF_HOST} { position: relative; }
+    [${AF_OWNED}][hidden], [${AF_OWNED}] [hidden] { display: none !important; }
     [${AF_OWNED}].af-placeholder {
       margin: 8px 12px; font: 13px/1.4 system-ui, sans-serif; color: inherit;
     }
