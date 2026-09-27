@@ -12,6 +12,8 @@ import {
   type Override,
   type Policy,
   type PostSnapshot,
+  type TestClassifyResult,
+  EXTRACTOR_VERSION,
 } from "../contracts";
 import { evaluate } from "../policy/evaluate";
 import { KevClassifier, MockClassifier } from "./classifier";
@@ -175,6 +177,44 @@ async function classifyPost(request: {
   return result;
 }
 
+async function testClassify(text: string, quoteText?: string): Promise<TestClassifyResult> {
+  const t0 = Date.now();
+  const [policy, settings] = await Promise.all([getPolicy(), getSettings()]);
+  const classifier = pickClassifier(settings);
+  const normalized = `${text}\u0000${quoteText ?? ""}`.replace(/\s+/g, " ").trim();
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(normalized));
+  const contentHash = [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  const post: PostSnapshot = {
+    platform: "x",
+    postId: `test:${contentHash.slice(0, 12)}`,
+    contentHash,
+    text,
+    quoteText: quoteText || undefined,
+    complete: true,
+    extractorVersion: EXTRACTOR_VERSION,
+  };
+  let probabilities: Record<string, number> | null = null;
+  let error: string | undefined;
+  try {
+    probabilities = await classifier.classify(post, policy);
+  } catch (e) {
+    error = String(e);
+  }
+  const ev = evaluate({ post, policy, probabilities, enabled: true });
+  return {
+    disposition: ev.disposition,
+    causeRuleIds: ev.causeRuleIds,
+    exceptionRuleIds: ev.exceptionRuleIds,
+    probabilities: probabilities ?? {},
+    trace: ev.trace,
+    modelVersion: classifier.modelVersion,
+    classifier: settings.classifier,
+    policyRevision: policy.revision,
+    elapsedMs: Date.now() - t0,
+    error,
+  };
+}
+
 // ---- broadcast ------------------------------------------------------------
 
 async function broadcast(msg: unknown) {
@@ -247,6 +287,9 @@ chrome.runtime.onMessage.addListener((raw: unknown, _sender, sendResponse) => {
         break;
       case "GET_ENABLED":
         sendResponse({ ok: true, enabled: await getEnabled() });
+        break;
+      case "TEST_CLASSIFY":
+        sendResponse({ ok: true, result: await testClassify(msg.text, msg.quoteText) });
         break;
     }
   })().catch((e) => sendResponse({ ok: false, error: String(e) }));

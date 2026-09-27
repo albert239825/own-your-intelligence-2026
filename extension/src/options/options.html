@@ -10,6 +10,7 @@
     <h1>Attention Filter</h1>
     <a href="#settings" id="nav-settings">Settings</a>
     <a href="#review" id="nav-review">Review hidden posts</a>
+    <a href="#test" id="nav-test">Test a post</a>
     <span class="spacer"></span>
     <span class="pill" id="enabled-pill">…</span>
     <button id="toggle-enabled">Toggle</button>
@@ -114,6 +115,33 @@
       </p>
       <div id="rv-list"></div>
       <p id="rv-empty" class="muted" hidden>Nothing hidden yet. Open the fixture feed or X with filtering on.</p>
+    </section>
+
+    <section id="view-test" class="view">
+      <div class="cols">
+        <div>
+          <div class="card">
+            <h2>Test a post</h2>
+            <p class="muted">Paste any post text; runs the saved policy through the selected model (mock or Kev). Nothing is cached or written to history.</p>
+            <label>Post text
+              <textarea id="ts-text" rows="6" placeholder="Paste a post here…"></textarea>
+            </label>
+            <label>Quoted post (optional)
+              <textarea id="ts-quote" rows="2"></textarea>
+            </label>
+            <p>
+              <button class="primary" id="ts-run">Classify</button>
+              <span class="muted">Ctrl/⌘+Enter</span>
+              <span id="ts-status"></span>
+            </p>
+          </div>
+        </div>
+        <div>
+          <div class="card" id="ts-result">
+            <p class="muted">Result appears here.</p>
+          </div>
+        </div>
+      </div>
     </section>
   </main>
 
