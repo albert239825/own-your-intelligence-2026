@@ -82,6 +82,24 @@ describe("controller", () => {
     controller.stop();
   });
 
+  it("stays collapsed when the host rewrites className (React hover re-render)", async () => {
+    const { fc, controller } = setup();
+    const t = makeAppTweet({ id: "301", text: "hide me" });
+    await startWith(controller, [t]);
+    fc.resolve("301", "hide");
+    await controller.idle();
+    expect(collapsed(t)).toBe(true);
+
+    t.className = "css-175oi2r r-hover";
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(collapsed(t)).toBe(true);
+    expect(t.querySelector(".af-bar")).not.toBeNull();
+    const css = document.querySelector("style[data-af-owned]")!.textContent!;
+    expect(css).toContain('[data-af-state="collapsed"] > *:not([data-af-owned])');
+    controller.stop();
+  });
+
   it("render/restore: collapsed bar, bar-click reveals in place, keep", async () => {
     const { fc, controller, onKeep, onCorrect } = setup();
     const t = makeAppTweet({ id: "300", text: "hide me" });
