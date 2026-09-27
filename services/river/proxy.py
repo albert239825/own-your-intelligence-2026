@@ -20,6 +20,7 @@ import logging
 import os
 import time
 from collections.abc import Awaitable, Callable
+from concurrent.futures import ThreadPoolExecutor
 from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request
@@ -95,8 +96,10 @@ def make_app(chat: ChatFn, model_version: str, token: str | None, timeout_s: flo
         try:
             responses = await asyncio.wait_for(asyncio.gather(*(chat(m) for m in messages)), timeout_s)
         except TimeoutError:
+            log.warning("upstream timeout after %ss (%d rules)", timeout_s, len(items))
             raise HTTPException(502, f"river upstream timeout after {timeout_s}s") from None
         except Exception as e:
+            log.warning("upstream error: %s: %s", type(e).__name__, e)
             raise HTTPException(502, f"river upstream error: {type(e).__name__}: {e}") from None
         latency_ms = (time.perf_counter() - started) * 1000
         answers = {}
@@ -115,10 +118,13 @@ def make_app(chat: ChatFn, model_version: str, token: str | None, timeout_s: flo
     return app
 
 
-def make_river_chat(client, base_model: str, checkpoint: str | None = None, timeout_s: float = 20.0) -> ChatFn:
+def make_river_chat(client, base_model: str, checkpoint: str | None = None, timeout_s: float = 20.0, max_inflight: int = 256) -> ChatFn:
     """Wraps river_client.Client (synchronous gRPC) in an async ChatFn. With
     `checkpoint` (river://...) uses chat_complete_from_checkpoint to serve a
-    fine-tuned LoRA; otherwise chat_complete against `base_model`."""
+    fine-tuned LoRA; otherwise chat_complete against `base_model`. Blocking
+    calls run on a dedicated pool of `max_inflight` threads (one per in-flight
+    rule) rather than asyncio's small default executor."""
+    pool = ThreadPoolExecutor(max_workers=max_inflight, thread_name_prefix="river")
 
     def call(messages: list[dict]) -> dict:
         kwargs = dict(CHAT_KWARGS, base_model=base_model, timeout=timeout_s)
@@ -131,7 +137,7 @@ def make_river_chat(client, base_model: str, checkpoint: str | None = None, time
         return json.loads(result.response_json)
 
     async def chat(messages: list[dict]) -> dict:
-        return await asyncio.to_thread(call, messages)
+        return await asyncio.get_running_loop().run_in_executor(pool, call, messages)
 
     return chat
 
