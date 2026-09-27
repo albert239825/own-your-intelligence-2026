@@ -10,13 +10,29 @@ import { createController } from "./controller";
 const isX = /(^|\.)x\.com$|(^|\.)twitter\.com$/.test(location.hostname);
 const adapter = isX ? xAdapter : fixtureAdapter;
 
+// Enable with `localStorage.afDebug = "1"` in the page console, then reload.
+const debugOn = (() => {
+  try {
+    return localStorage.getItem("afDebug") === "1";
+  } catch {
+    return false;
+  }
+})();
+const debug = (...a: unknown[]) => {
+  if (debugOn) console.debug("[af]", ...a);
+};
+
 function send<T>(msg: unknown): Promise<T | undefined> {
-  return chrome.runtime.sendMessage(msg).then((r) => (r?.ok ? r : undefined));
+  return chrome.runtime.sendMessage(msg).then((r) => {
+    if (!r?.ok) debug("worker replied not-ok", (msg as { type?: string }).type, r);
+    return r?.ok ? r : undefined;
+  });
 }
 
 const controller = createController({
   adapter,
   classify: async (snapshot, policyRevision) => {
+    debug("classify", snapshot.postId);
     const res = await send<{ result: DecisionResult }>({
       type: "CLASSIFY_POST",
       request: {
@@ -52,7 +68,9 @@ const controller = createController({
     void send({ type: "SAVE_FEEDBACK", feedback });
   },
   log: (...a) => console.warn("[af]", ...a),
+  debug,
 });
+debug("content script loaded", { adapter: isX ? "x" : "fixture", href: location.href });
 
 chrome.runtime.onMessage.addListener((raw: unknown) => {
   controller.handleBroadcast(raw);
