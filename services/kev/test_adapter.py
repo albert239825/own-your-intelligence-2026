@@ -91,3 +91,17 @@ def test_systemone_validates_body(client) -> None:
 def test_no_token_disables_auth() -> None:
     c = TestClient(make_app(FakeModel(), "v", None))
     assert c.post("/v1/systemone", json=BODY).status_code == 200
+
+
+def test_cors_preflight_from_extension_origin(client) -> None:
+    c, _ = client
+    origin = "chrome-extension://abcdefghijklmnopabcdefghijklmnop"
+    r = c.options(
+        "/v1/systemone",
+        headers={"Origin": origin, "Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "authorization,content-type"},
+    )
+    assert r.status_code == 200
+    assert r.headers["access-control-allow-origin"] == "*"
+    assert "authorization" in r.headers["access-control-allow-headers"].lower()
+    r = c.post("/v1/systemone", json=BODY, headers={"Authorization": "Bearer secret", "Origin": origin})
+    assert r.status_code == 200 and r.headers["access-control-allow-origin"] == "*"

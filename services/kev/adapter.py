@@ -19,6 +19,7 @@ from collections.abc import Awaitable, Callable
 from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
@@ -77,8 +78,12 @@ AnswerFn = Callable[[dict], Awaitable[dict]]
 
 def make_app(answer: AnswerFn, model_version: str, token: str | None) -> FastAPI:
     """`answer` takes a kev.api.SystemOneRequest-shaped dict and returns Kev's
-    native response body. `token` enables bearer auth on /v1/*; /health is open."""
+    native response body. `token` enables bearer auth on /v1/*; /health is open.
+    CORS is wide open (any origin, incl. chrome-extension://) since the bearer
+    token is the access control; the extension's service worker fetch is subject
+    to CORS until the user grants the optional host permission."""
     app = FastAPI(title="attention-filter-kev")
+    app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["POST", "GET"], allow_headers=["Authorization", "Content-Type"])
 
     async def require_bearer(request: Request) -> None:
         if token is None:
