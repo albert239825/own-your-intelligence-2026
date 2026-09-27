@@ -29,7 +29,7 @@ npx tsc --noEmit   # typecheck
 1. `cd extension && npm run build`
 2. Chrome → `chrome://extensions` → Developer mode → **Load unpacked** → select `extension/dist/`.
 3. For the fixture feed, enable **Allow access to file URLs** on the extension
-   card (the content script matches `file://*/fixtures/feed.html`).
+   card (the content script matches `file:///*/fixtures/feed.html`).
 
 ## Run the fixture
 
