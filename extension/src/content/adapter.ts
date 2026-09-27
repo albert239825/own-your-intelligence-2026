@@ -86,13 +86,16 @@ export function ensureStyle(): void {
     [${AF_OWNED}] .af-panel label { display: block; font-size: 12px; opacity: 0.8; }
     [${AF_OWNED}] .af-panel input[type=range] { width: 100%; margin: 4px 0 8px; }
     [${AF_OWNED}] .af-panel .af-actions { display: flex; gap: 6px; }
-    [${AF_OWNED}].af-hide-pill {
+    [${AF_OWNED}].af-hide-pill, [${AF_OWNED}].af-good-pill {
       position: absolute; top: 6px; right: 8px; z-index: 5; padding: 1px 8px;
       border-radius: 9999px; font: 11px/1.5 system-ui, sans-serif; cursor: pointer;
       color: inherit; opacity: 0.45; background: rgba(128,128,128,0.15);
       border: 1px solid rgba(128,128,128,0.4);
     }
-    [${AF_OWNED}].af-hide-pill:hover, [${AF_OWNED}].af-hide-pill[aria-expanded="true"] { opacity: 1; }
+    [${AF_OWNED}].af-good-pill { right: 56px; }
+    [${AF_OWNED}].af-hide-pill:hover, [${AF_OWNED}].af-hide-pill[aria-expanded="true"],
+    [${AF_OWNED}].af-good-pill:hover { opacity: 1; }
+    [${AF_OWNED}].af-good-pill:disabled { cursor: default; opacity: 0.8; }
     [${AF_OWNED}].af-menu {
       position: absolute; top: 30px; right: 8px; z-index: 6; min-width: 180px;
       display: flex; flex-direction: column; gap: 4px; padding: 8px;
@@ -146,6 +149,8 @@ function feedbackFor(
     desiredAction,
     ruleId: "ruleId" in extra ? extra.ruleId : result.causeRuleIds[0],
     explanation: extra.explanation,
+    quoteText: snapshot.quoteText,
+    probabilities: result.probabilities,
     policyRevision: result.policyRevision,
   };
 }
@@ -359,6 +364,26 @@ export function renderShown(
     pill.setAttribute("aria-expanded", "true");
   });
 
+  // "Good" pill: confirms the show decision — keep override + confirm_show
+  // feedback (positive label for training). One-shot.
+  const good = document.createElement("button");
+  good.type = "button";
+  good.setAttribute(AF_OWNED, "");
+  good.className = "af-good-pill";
+  good.textContent = "Good";
+  good.addEventListener("click", (e) => {
+    e.stopPropagation();
+    handlers.onKeep(snapshot);
+    handlers.onCorrect(
+      feedbackFor(snapshot, result, "confirm_show", "keep", { ruleId: undefined }),
+    );
+    good.textContent = "Noted";
+    good.disabled = true;
+    pill.remove();
+    closeMenu();
+  });
+
+  node.prepend(good);
   node.prepend(pill);
 }
 
