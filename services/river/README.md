@@ -80,7 +80,12 @@ client round trip (proxy on the same VM, so rtt≈server; not browser wall-clock
 - Session time 165 s (model ready at 18 s).
 - Checkpoint: `river://894286df-abe9-4b4e-ae95-1317d3b0398a/sampler_weights/af-v1`.
 
-## Gate A — holdout.jsonl (n=10) via proxy, run_quality.py, DEFAULT_POLICY thresholds
+## Gate A — holdout.jsonl (n=10) via proxy, run_quality.py, pre-recalibration rules/thresholds
+
+Run with the original imperative rule phrasing and 0.85/0.85/0.90 hide
+thresholds (evals/common.py as of devin/track-m). main has since moved to
+question phrasing and 0.70/0.60/0.50; River has not been re-run against those
+(rerun: `python evals/run_quality.py --endpoint <proxy> --set holdout`).
 
 per rule: thr / prec / rec / tp / fp / fn / min+ / max-
 
@@ -102,13 +107,13 @@ per rule: thr / prec / rec / tp / fp / fn / min+ / max-
   the SFT path works end-to-end and moves the decision token — not a quality
   claim.
 
-## Kev vs River (Kev numbers from evals/README.md on devin/track-m; kev-4b, one L40S, Modal)
+## Kev vs River (Kev numbers from evals/README.md; kev-4b, one L40S, Modal)
 
 | | Kev (kev-4b, Modal L40S) | River base (Qwen3.5-9B, shared) | River tuned (af-v1 LoRA) |
 | --- | --- | --- | --- |
 | server latency p50 @ conc 1 / 8 / 30 | 20 / 127 / 332 ms | 1729 / 2138 / 3112 ms | not measured (same path; expect ≈ base) |
 | errors @ conc 30 | 0/90 | 0/60 | — |
-| holdout disposition agreement | 0.50 (never crosses 0.85/0.90 thr; ranks correctly) | 0.90 | 1.00 (n=10, saturated) |
+| holdout disposition agreement | 0.50 with the old 0.85/0.90 thresholds; **1.00** after recalibration (0.70/0.60/0.50, question phrasing) | 0.90 (old thresholds) | 1.00 (old thresholds; n=10, saturated) |
 | holdout disagreement retention | 1.00 | 1.00 | 1.00 |
 | cost | ~$47/day one warm L40S (min_containers=1) or ~1-2 min cold start at 0 | per-token, ≈330 prompt tokens/post; no numeric public price (docs-only); proxy is a $0-idle Modal CPU container | + GPU session time for training (165 s here) |
 | fine-tune path | none in this repo | — | evals/river/format.py → sft.py → `RIVER_CHECKPOINT` redeploy |

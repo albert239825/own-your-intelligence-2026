@@ -3,14 +3,38 @@
 <head>
   <meta charset="utf-8" />
   <style>
-    body { font: 14px/1.4 system-ui, sans-serif; width: 240px; padding: 12px; }
-    label { display: flex; align-items: center; gap: 8px; }
-    #status { color: #555; font-size: 12px; margin-top: 8px; }
+    :root {
+      --bg: #ffffff; --fg: #1a1a1a; --muted: #5f6368; --border: #d0d3d8; --accent: #1a6fd4;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #14161a; --fg: #e8eaed; --muted: #9aa0a6; --border: #3c4043; --accent: #8ab4f8;
+      }
+    }
+    body { font: 14px/1.4 system-ui, sans-serif; width: 260px; padding: 12px; margin: 0; background: var(--bg); color: var(--fg); }
+    h1 { font-size: 15px; margin: 0 0 8px; }
+    label.switch { display: flex; align-items: center; gap: 8px; }
+    .muted { color: var(--muted); font-size: 12px; }
+    .counts { margin: 10px 0; }
+    .counts div { margin-bottom: 2px; }
+    a { color: var(--accent); display: inline-block; margin-right: 12px; cursor: pointer; }
+    button { font: inherit; padding: 6px 14px; width: 100%; cursor: pointer; border: 1px solid var(--border); border-radius: 6px; background: var(--accent); border-color: var(--accent); color: #fff; margin-top: 8px; }
   </style>
 </head>
 <body>
-  <label><input type="checkbox" id="enabled" /> Filter enabled</label>
-  <div id="status"></div>
+  <h1>Attention Filter</h1>
+  <label class="switch"><input type="checkbox" id="enabled" /> <span id="status">…</span></label>
+  <div id="setup" hidden>
+    <button id="finish-setup">Finish setup</button>
+  </div>
+  <div id="main" hidden>
+    <div class="counts">
+      <div>Hidden: <span id="hidden">0</span> <span class="muted">(this session)</span></div>
+      <div>Uncertain: <span id="uncertain">0</span></div>
+    </div>
+    <a id="open-settings">Settings</a>
+    <a id="open-review">Review hidden posts</a>
+  </div>
   <script src="popup/popup.js"></script>
 </body>
 </html>

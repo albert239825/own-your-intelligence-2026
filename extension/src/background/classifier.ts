@@ -40,13 +40,19 @@ export interface KevSettings {
   token: string;
 }
 
+export const DEFAULT_KEV_ENDPOINT =
+  "https://albert23982--attention-filter-kev-api.modal.run";
+
 /**
  * Real classifier: POST {endpoint}/v1/systemone with bearer auth.
- * TODO: verify response shape against services/kev serve.py — currently
- * expects `{ answers: { [ruleId]: { probability: number } } }`.
+ * Response shape verified against services/kev adapter.py:
+ * `{ model_version, answers: { [ruleId]: { probability } } }`.
  */
 export class KevClassifier implements Classifier {
-  readonly modelVersion = "kev-4b-0.1";
+  private _modelVersion = "kev-4b-0.1";
+  get modelVersion(): string {
+    return this._modelVersion;
+  }
 
   constructor(private settings: KevSettings) {}
 
@@ -65,8 +71,9 @@ export class KevClassifier implements Classifier {
       questions,
     };
 
-    const timeout = AbortSignal.timeout(800);
-    const res = await fetch(`${this.settings.endpoint.replace(/\/$/, "")}/v1/systemone`, {
+    const timeout = AbortSignal.timeout(2500);
+    const endpoint = (this.settings.endpoint || DEFAULT_KEV_ENDPOINT).replace(/\/$/, "");
+    const res = await fetch(`${endpoint}/v1/systemone`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
@@ -78,8 +85,10 @@ export class KevClassifier implements Classifier {
     if (!res.ok) throw new Error(`kev endpoint ${res.status}`);
 
     const json = (await res.json()) as {
+      model_version?: string;
       answers?: Record<string, { probability?: number }>;
     };
+    if (json.model_version) this._modelVersion = json.model_version;
     const probs: Record<string, number> = {};
     for (const id of requiredRuleIds(policy)) {
       const p = json.answers?.[id]?.probability;

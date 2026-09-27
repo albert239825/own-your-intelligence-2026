@@ -7,6 +7,7 @@ import {
   PolicySchema,
   type DecisionResult,
   type Feedback,
+  type HistoryEntry,
   type Message,
   type Override,
   type Policy,
@@ -14,6 +15,7 @@ import {
 } from "../contracts";
 import { evaluate } from "../policy/evaluate";
 import { KevClassifier, MockClassifier } from "./classifier";
+import { appendCapped, withStore } from "./store";
 
 const HISTORY_LIMIT = 300;
 const MAX_IN_FLIGHT = 8;
@@ -41,11 +43,13 @@ async function storeSet(values: Record<string, unknown>): Promise<void> {
 }
 
 async function getPolicy(): Promise<Policy> {
-  const raw = await storeGet<unknown>("policy");
-  const parsed = PolicySchema.safeParse(raw);
-  if (parsed.success) return parsed.data;
-  await storeSet({ policy: DEFAULT_POLICY });
-  return DEFAULT_POLICY;
+  return withStore(async () => {
+    const raw = await storeGet<unknown>("policy");
+    const parsed = PolicySchema.safeParse(raw);
+    if (parsed.success) return parsed.data;
+    await storeSet({ policy: DEFAULT_POLICY });
+    return DEFAULT_POLICY;
+  });
 }
 async function getEnabled(): Promise<boolean> {
   return (await storeGet<boolean>("enabled")) ?? true;
@@ -56,19 +60,26 @@ async function getOverrides(): Promise<Record<string, Override>> {
 async function getSettings(): Promise<Settings> {
   return { ...DEFAULT_SETTINGS, ...(await storeGet<Partial<Settings>>("settings")) };
 }
-async function getHistory(): Promise<DecisionResult[]> {
-  return (await storeGet<DecisionResult[]>("history")) ?? [];
+async function getHistory(): Promise<HistoryEntry[]> {
+  return (await storeGet<HistoryEntry[]>("history")) ?? [];
 }
-async function pushHistory(result: DecisionResult): Promise<void> {
-  const history = await getHistory();
-  history.unshift(result);
-  if (history.length > HISTORY_LIMIT) history.length = HISTORY_LIMIT;
-  await storeSet({ history });
+async function pushHistory(result: DecisionResult, post: PostSnapshot): Promise<void> {
+  const entry: HistoryEntry = {
+    ...result,
+    post: { text: post.text, quoteText: post.quoteText },
+    at: Date.now(),
+  };
+  await withStore(async () => {
+    const history = await getHistory();
+    await storeSet({ history: appendCapped(history, entry, HISTORY_LIMIT) });
+  });
 }
 async function appendFeedback(fb: Feedback): Promise<void> {
-  const list = (await storeGet<Feedback[]>("feedback")) ?? [];
-  list.push(fb);
-  await storeSet({ feedback: list });
+  await withStore(async () => {
+    const list = (await storeGet<Feedback[]>("feedback")) ?? [];
+    list.push(fb);
+    await storeSet({ feedback: list });
+  });
 }
 
 // ---- decision cache ------------------------------------------------------
@@ -93,7 +104,7 @@ function release() {
 }
 
 function pickClassifier(settings: Settings) {
-  return settings.classifier === "kev" && settings.endpoint
+  return settings.classifier === "kev"
     ? new KevClassifier({ endpoint: settings.endpoint, token: settings.token })
     : mock;
 }
@@ -160,7 +171,7 @@ async function classifyPost(request: {
   };
 
   if (!overrideApplies) cache.set(key, result);
-  await pushHistory(result);
+  await pushHistory(result, request.post);
   return result;
 }
 
@@ -210,9 +221,11 @@ chrome.runtime.onMessage.addListener((raw: unknown, _sender, sendResponse) => {
         sendResponse({ ok: true });
         break;
       case "SET_OVERRIDE": {
-        const overrides = await getOverrides();
-        overrides[msg.override.postId] = msg.override;
-        await storeSet({ overrides });
+        await withStore(async () => {
+          const overrides = await getOverrides();
+          overrides[msg.override.postId] = msg.override;
+          await storeSet({ overrides });
+        });
         sendResponse({ ok: true });
         break;
       }

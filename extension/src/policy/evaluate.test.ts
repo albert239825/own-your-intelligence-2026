@@ -73,7 +73,8 @@ describe("evaluate", () => {
   });
 
   it("does not hide just under threshold", () => {
-    const r = evaluate({ post, policy: DEFAULT_POLICY, probabilities: probs({ rage_bait: 0.84 }), enabled: true });
+    // rage_bait hideThreshold is 0.70 in DEFAULT_POLICY
+    const r = evaluate({ post, policy: DEFAULT_POLICY, probabilities: probs({ rage_bait: 0.69 }), enabled: true });
     expect(r.disposition).toBe("show");
   });
 

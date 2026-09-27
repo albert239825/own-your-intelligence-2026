@@ -114,9 +114,9 @@ Cache key: `contentHash + policyRevision + modelVersion + compilerVersion`.
 
 | Rule id | Instruction (shown to user verbatim) | Threshold | Exceptions |
 |---|---|---|---|
-| `rage_bait` | Hide posts whose main purpose is provoking anger through insults, caricature, or unsupported outrage. Criticism or disagreement alone is not rage bait. | 0.85 | `substantive_critique` |
-| `hype` | Hide posts that promote a product, model, or trend with superlatives and no concrete evidence, demo, or result. | 0.85 | `substantive_critique` |
-| `engagement_farming` | Hide posts whose main purpose is to solicit replies, likes, or reposts (polls with no content, "agree?", "RT if"). | 0.90 | — |
+| `rage_bait` | Is this post rage bait — is its main purpose provoking anger through insults, caricature, or unsupported outrage (criticism or disagreement alone does not count)? | 0.70 | `substantive_critique` |
+| `hype` | Is this post hype — does it promote a product, model, or trend with superlatives and no concrete evidence, demo, or result? | 0.60 | `substantive_critique` |
+| `engagement_farming` | Is this post engagement farming — is its main purpose to solicit replies, likes, or reposts (content-free polls, "agree?", "RT if", follow-for-follow)? | 0.50 | — |
 | `substantive_critique` (exception only) | Does the post develop a specific criticism or argument with reasons, methods, limitations, or evidence? | — | — |
 | `custom` | User's free-text instruction, sent as one additional question | 0.85 | — |
 

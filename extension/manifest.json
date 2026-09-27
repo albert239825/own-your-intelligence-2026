@@ -14,7 +14,7 @@
       "matches": [
         "https://x.com/*",
         "https://twitter.com/*",
-        "file://*/fixtures/feed.html",
+        "file:///*/fixtures/feed.html",
         "http://localhost/*",
         "http://127.0.0.1/*"
       ],
