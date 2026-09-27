@@ -49,6 +49,7 @@ void (async () => {
   }
   document.getElementById("main")!.hidden = false;
   const counts = historyCounts(histRes?.history ?? []);
+  document.getElementById("seen")!.textContent = String(counts.total);
   document.getElementById("hidden")!.textContent = String(counts.hiddenToday);
   document.getElementById("uncertain")!.textContent = String(counts.uncertainTotal);
 })();
