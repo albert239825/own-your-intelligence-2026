@@ -20,23 +20,14 @@ from pathlib import Path
 
 from common import (
     ALL_RULES,
-    EXCEPTION_KEEP,
-    HIDE_THRESHOLDS,
     add_backend_args,
     evaluate,
     load_jsonl,
     make_backend,
     request_body,
     results_path,
+    summarize,
 )
-
-FIRE_THRESHOLDS = {**HIDE_THRESHOLDS, "substantive_critique": EXCEPTION_KEEP}
-
-
-def prf(tp: int, fp: int, fn: int) -> tuple[float | None, float | None]:
-    precision = tp / (tp + fp) if tp + fp else None
-    recall = tp / (tp + fn) if tp + fn else None
-    return precision, recall
 
 
 def fmt(x: float | None) -> str:
@@ -73,38 +64,9 @@ def main() -> int:
     finally:
         backend.close()
 
-    per_rule = {}
-    for rid in ALL_RULES:
-        t = FIRE_THRESHOLDS[rid]
-        tp = sum(1 for r in rows if r["expected"][rid] and r["probabilities"][rid] >= t)
-        fp = sum(1 for r in rows if not r["expected"][rid] and r["probabilities"][rid] >= t)
-        fn = sum(1 for r in rows if r["expected"][rid] and r["probabilities"][rid] < t)
-        p, rc = prf(tp, fp, fn)
-        pos = [r["probabilities"][rid] for r in rows if r["expected"][rid]]
-        neg = [r["probabilities"][rid] for r in rows if not r["expected"][rid]]
-        per_rule[rid] = {
-            "threshold": t,
-            "tp": tp,
-            "fp": fp,
-            "fn": fn,
-            "precision": p,
-            "recall": rc,
-            "min_positive": min(pos) if pos else None,
-            "max_negative": max(neg) if neg else None,
-        }
-
-    hid = [r for r in rows if r["disposition"] == "hide"]
-    tp = sum(1 for r in hid if r["expected_disposition"] == "hide")
-    fp = len(hid) - tp
-    fn = sum(1 for r in rows if r["expected_disposition"] == "hide" and r["disposition"] != "hide")
-    hide_p, hide_r = prf(tp, fp, fn)
-
-    critiques = [r for r in rows if r["expected_disposition"] == "show" and r["expected"]["substantive_critique"]]
-    retained = sum(1 for r in critiques if r["disposition"] != "hide")
-    retention = retained / len(critiques) if critiques else None
-
-    agree = sum(1 for r in rows if r["disposition"] == r["expected_disposition"])
-    uncertain = sum(1 for r in rows if r["disposition"] == "uncertain")
+    metrics = summarize(rows)
+    per_rule = metrics["per_rule"]
+    hide, retention = metrics["hide"], metrics["disagreement_retention"]
 
     print()
     print(f"{'rule':22s} {'thr':>5s} {'prec':>6s} {'rec':>6s}   tp fp fn   {'min+':>5s} {'max-':>5s}")
@@ -115,22 +77,14 @@ def main() -> int:
         )
     print("(min+ / max- = lowest probability on an expected-positive / highest on an expected-negative; separable iff min+ > max-)")
     print()
-    print(f"hide precision          {fmt(hide_p)}   (tp={tp} fp={fp})")
-    print(f"hide recall             {fmt(hide_r)}   (fn={fn})")
-    print(f"disagreement retention  {fmt(retention)}   ({retained}/{len(critiques)} expected-show critiques stay visible)")
-    print(f"disposition agreement   {agree / len(rows):5.2f}   ({agree}/{len(rows)}, {uncertain} uncertain)")
+    agree = round(metrics["disposition_agreement"] * len(rows))
+    print(f"hide precision          {fmt(hide['precision'])}   (tp={hide['tp']} fp={hide['fp']})")
+    print(f"hide recall             {fmt(hide['recall'])}   (fn={hide['fn']})")
+    kept = f"({retention['retained']}/{retention['total']} expected-show critiques stay visible)"
+    print(f"disagreement retention  {fmt(retention['value'])}   {kept}")
+    print(f"disposition agreement   {metrics['disposition_agreement']:5.2f}   ({agree}/{len(rows)}, {metrics['uncertain']} uncertain)")
 
-    summary = {
-        "backend": backend.name,
-        "data": str(args.data),
-        "n": len(rows),
-        "per_rule": per_rule,
-        "hide": {"precision": hide_p, "recall": hide_r, "tp": tp, "fp": fp, "fn": fn},
-        "disagreement_retention": {"value": retention, "retained": retained, "total": len(critiques)},
-        "disposition_agreement": agree / len(rows),
-        "uncertain": uncertain,
-        "rows": rows,
-    }
+    summary = {"backend": backend.name, "data": str(args.data), **metrics, "rows": rows}
     out = results_path("quality")
     out.write_text(json.dumps(summary, indent=2))
     print(f"\nwrote {out}")

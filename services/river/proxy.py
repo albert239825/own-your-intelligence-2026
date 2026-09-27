@@ -127,19 +127,25 @@ def make_river_chat(client, base_model: str, checkpoint: str | None = None, time
     pool = ThreadPoolExecutor(max_workers=max_inflight, thread_name_prefix="river")
 
     def call(messages: list[dict]) -> dict:
-        kwargs = dict(CHAT_KWARGS, base_model=base_model, timeout=timeout_s)
-        if checkpoint:
-            result = client.chat_complete_from_checkpoint(messages, checkpoint_path=checkpoint, **kwargs)
-        else:
-            result = client.chat_complete(messages, **kwargs)
-        if result.status_code != 200:
-            raise RuntimeError(f"river status {result.status_code}")
-        return json.loads(result.response_json)
+        return river_chat_sync(client, base_model, checkpoint, messages, timeout_s)
 
     async def chat(messages: list[dict]) -> dict:
         return await asyncio.get_running_loop().run_in_executor(pool, call, messages)
 
     return chat
+
+
+def river_chat_sync(client, base_model: str, checkpoint: str | None, messages: list[dict], timeout_s: float = 20.0) -> dict:
+    """One blocking River chat completion in the proxy's answer shape (CHAT_KWARGS,
+    LoRA checkpoint when given). Shared with the offline eval in train.py."""
+    kwargs = dict(CHAT_KWARGS, base_model=base_model, timeout=timeout_s)
+    if checkpoint:
+        result = client.chat_complete_from_checkpoint(messages, checkpoint_path=checkpoint, **kwargs)
+    else:
+        result = client.chat_complete(messages, **kwargs)
+    if result.status_code != 200:
+        raise RuntimeError(f"river status {result.status_code}")
+    return json.loads(result.response_json)
 
 
 def model_version_for(base_model: str, checkpoint: str | None) -> str:
