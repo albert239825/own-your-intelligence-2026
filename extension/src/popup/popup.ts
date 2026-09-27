@@ -24,7 +24,7 @@ document.getElementById("finish-setup")!.addEventListener("click", () => {
   void chrome.runtime.openOptionsPage();
 });
 document.getElementById("open-settings")!.addEventListener("click", () => {
-  void chrome.runtime.openOptionsPage();
+  void chrome.tabs.create({ url: chrome.runtime.getURL("options.html#settings") });
 });
 document.getElementById("open-review")!.addEventListener("click", () => {
   void chrome.tabs.create({ url: chrome.runtime.getURL("options.html#review") });

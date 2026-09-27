@@ -617,6 +617,10 @@ void (async () => {
   await route();
 })();
 
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area === "local" && "enabled" in changes) void refreshEnabled();
+});
+
 $("ob-save").addEventListener("click", () => void saveOnboarding());
 $("ob-lessmore").addEventListener("input", schedulePreview);
 $("ob-alwayskeep").addEventListener("input", schedulePreview);
