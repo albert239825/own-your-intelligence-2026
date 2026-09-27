@@ -67,7 +67,10 @@ export function discover(root: ParentNode | Element): Element[] {
  * <article> (lite quote) or a div[role="link"] (app quote).
  */
 export function isInsideQuote(el: Element, node: Element): boolean {
-  const c = el.closest('article, [role="link"]');
+  // Search from the parent: closest() matches the element itself, and in the
+  // app DOM status/timestamp anchors are <a role="link"> — matching self
+  // would judge every status link "inside a quote".
+  const c = el.parentElement?.closest('article, div[role="link"]') ?? null;
   return c !== null && c !== node;
 }
 

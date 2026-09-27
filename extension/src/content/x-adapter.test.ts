@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, beforeEach } from "vitest";
 import { loadSample } from "./test-utils";
-import { discover, fingerprint, xAdapter } from "./x-adapter";
+import { discover, fingerprint, isInsideQuote, postIdFrom, xAdapter } from "./x-adapter";
 
 beforeEach(() => {
   document.body.innerHTML = "";
@@ -43,6 +43,30 @@ describe("xAdapter on verified lite DOM (logged-out samples)", () => {
     expect(quote.quoteText?.startsWith("Three SpaceXAI employees")).toBe(true);
     expect(quote.quoteText).not.toContain("Show more");
     expect(nodes.length).toBe(snaps.length);
+  });
+});
+
+describe("xAdapter on real logged-in Home DOM", () => {
+  it("discovers all 8 posts with ids, text, and correct quote detection", async () => {
+    loadSample("home-logged-in.html");
+    const { nodes, snaps } = await extractAll();
+    expect(nodes.length).toBe(8);
+    expect(snaps.every((s) => s !== null)).toBe(true);
+    for (const s of snaps) {
+      expect(s!.postId).toMatch(/^\d{19}$/);
+      expect(s!.complete).toBe(true);
+      expect(s!.text.length).toBeGreaterThan(0);
+    }
+    // 3rd and 5th articles (order in file) are quote posts; the rest are not.
+    const hasQuote = snaps.map((s) => s!.quoteText !== undefined);
+    expect(hasQuote).toEqual([false, false, true, false, true, false, false, false]);
+    // Regression: the timestamp anchor is <a role="link">; matching self via
+    // closest() used to mark it "inside a quote" and postIdFrom returned null.
+    const first = nodes[0]!;
+    const timeAnchor = [...first.querySelectorAll("a")].find((a) => a.querySelector("time"))!;
+    expect(timeAnchor.getAttribute("role")).toBe("link");
+    expect(isInsideQuote(timeAnchor, first)).toBe(false);
+    expect(postIdFrom(first)).not.toBeNull();
   });
 });
 
