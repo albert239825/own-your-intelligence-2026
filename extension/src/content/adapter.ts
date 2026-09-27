@@ -55,9 +55,12 @@ export function ensureStyle(): void {
     [data-af-state="collapsed"] > *:not([${AF_OWNED}]) { display: none !important; }
     .${AF_HOST}, [data-af-state="shown"] { position: relative; }
     [${AF_OWNED}][hidden], [${AF_OWNED}] [hidden] { display: none !important; }
+    [data-af-state="collapsed"], [data-af-state="expanded"] { flex-wrap: wrap; }
     [${AF_OWNED}].af-placeholder {
+      flex: 1 1 100%; box-sizing: border-box;
       margin: 8px 12px; font: 13px/1.4 system-ui, sans-serif; color: inherit;
     }
+    [data-af-state="expanded"] > [${AF_OWNED}].af-placeholder { order: 9999; }
     [${AF_OWNED}] .af-bar {
       display: block; width: 100%; box-sizing: border-box; text-align: left;
       padding: 8px 14px; border-radius: 12px; cursor: pointer; font: inherit;
