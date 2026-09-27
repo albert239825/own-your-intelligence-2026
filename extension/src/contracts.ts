@@ -118,27 +118,27 @@ export const DEFAULT_POLICY: Policy = {
       id: "rage_bait",
       title: "Rage bait",
       instruction:
-        "Hide posts whose main purpose is provoking anger through insults, caricature, or unsupported outrage. Criticism or disagreement alone is not rage bait.",
+        "Is this post rage bait — is its main purpose provoking anger through insults, caricature, or unsupported outrage (criticism or disagreement alone does not count)?",
       enabled: true,
-      hideThreshold: 0.85,
+      hideThreshold: 0.7,
       exceptionRuleIds: ["substantive_critique"],
     },
     {
       id: "hype",
       title: "Hype",
       instruction:
-        "Hide posts that promote a product, model, or trend with superlatives and no concrete evidence, demo, or result.",
+        "Is this post hype — does it promote a product, model, or trend with superlatives and no concrete evidence, demo, or result?",
       enabled: true,
-      hideThreshold: 0.85,
+      hideThreshold: 0.6,
       exceptionRuleIds: ["substantive_critique"],
     },
     {
       id: "engagement_farming",
       title: "Engagement farming",
       instruction:
-        "Hide posts whose main purpose is to solicit replies, likes, or reposts: content-free polls, 'agree?', 'RT if', follow-for-follow.",
+        "Is this post engagement farming — is its main purpose to solicit replies, likes, or reposts (content-free polls, 'agree?', 'RT if', follow-for-follow)?",
       enabled: true,
-      hideThreshold: 0.9,
+      hideThreshold: 0.5,
       exceptionRuleIds: [],
     },
     {
