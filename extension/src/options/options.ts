@@ -22,6 +22,7 @@ import {
   type Aggressiveness,
   type Settings,
 } from "./state";
+import { buildTrainingRecords, toJsonl } from "./training";
 
 function send<T>(msg: unknown): Promise<T | undefined> {
   return chrome.runtime.sendMessage(msg).then((r) => (r?.ok ? r : undefined));
@@ -474,6 +475,22 @@ async function exportJson(): Promise<void> {
   URL.revokeObjectURL(a.href);
 }
 
+async function exportTraining(): Promise<void> {
+  const [res, store] = await Promise.all([
+    send<{ policy: Policy }>({ type: "GET_POLICY" }),
+    chrome.storage.local.get("feedback"),
+  ]);
+  const policy = res?.policy ?? currentPolicy;
+  const feedback = (store.feedback as Feedback[] | undefined) ?? [];
+  const jsonl = toJsonl(buildTrainingRecords(policy, feedback));
+  const blob = new Blob([jsonl], { type: "application/x-ndjson" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "attention-filter-training.jsonl";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 async function importJson(file: File): Promise<void> {
   const text = await file.text();
   const res = parseImport(text);
@@ -507,6 +524,7 @@ const FEEDBACK_KIND_LABEL: Record<Feedback["kind"], string> = {
   wrong_classification: "Wrong classification",
   change_preference: "Preference changed",
   confirm_hide: "Confirmed",
+  confirm_show: "Kept (good)",
 };
 
 async function renderReview(): Promise<void> {
@@ -644,6 +662,8 @@ $("st-reonboard").addEventListener("click", async () => {
 });
 $("st-export").addEventListener("click", () => void exportJson());
 $("rv-export").addEventListener("click", () => void exportJson());
+$("st-training-export").addEventListener("click", () => void exportTraining());
+$("rv-training-export").addEventListener("click", () => void exportTraining());
 $("st-import").addEventListener("click", () => ($("st-import-file") as HTMLInputElement).click());
 $("st-import-file").addEventListener("change", async (e) => {
   const f = (e.target as HTMLInputElement).files?.[0];

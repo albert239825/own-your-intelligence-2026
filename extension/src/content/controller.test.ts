@@ -333,6 +333,11 @@ describe("controller", () => {
       ruleId: "rage_bait",
       postId: "1000",
     });
+    // Feedback carries the post's quote text and the model probabilities
+    // at decision time (makeResult emits empty probs; they must match the
+    // DecisionResult's verbatim).
+    expect(onCorrect.mock.calls[0]![0].probabilities).toEqual({});
+    expect("quoteText" in onCorrect.mock.calls[0]![0]).toBe(true);
 
     // Noted persists across a re-expand for this node.
     bar(t).click();
@@ -405,6 +410,39 @@ describe("controller", () => {
       ruleId: undefined,
       explanation: "spoilers",
     });
+    controller.stop();
+  });
+
+  it("Good on a shown post: keep override + confirm_show feedback, pill reads Noted", async () => {
+    const { fc, controller, onKeep, onCorrect } = setup();
+    const t = makeAppTweet({ id: "1200", text: "keep me" });
+    await startWith(controller, [t]);
+    fc.resolve("1200", "show");
+    await controller.idle();
+
+    const good = t.querySelector<HTMLButtonElement>("[data-af-owned].af-good-pill")!;
+    expect(good.textContent).toBe("Good");
+    expect(t.querySelector(".af-hide-pill")).not.toBeNull();
+
+    good.click();
+    expect(onKeep).toHaveBeenCalledTimes(1);
+    expect(onKeep.mock.calls[0]![0].postId).toBe("1200");
+    expect(onCorrect).toHaveBeenCalledTimes(1);
+    expect(onCorrect.mock.calls[0]![0]).toMatchObject({
+      kind: "confirm_show",
+      desiredAction: "keep",
+      postId: "1200",
+    });
+    expect(onCorrect.mock.calls[0]![0].ruleId).toBeUndefined();
+    expect(good.textContent).toBe("Noted");
+    expect(good.disabled).toBe(true);
+    expect(t.querySelector(".af-hide-pill")).toBeNull();
+    expect(t.querySelector(".af-menu")).toBeNull();
+
+    // Second click is a no-op.
+    good.click();
+    expect(onKeep).toHaveBeenCalledTimes(1);
+    expect(onCorrect).toHaveBeenCalledTimes(1);
     controller.stop();
   });
 
