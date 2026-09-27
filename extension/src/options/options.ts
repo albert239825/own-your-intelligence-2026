@@ -1,4 +1,5 @@
 import {
+  DEFAULT_CUSTOM_THRESHOLD,
   DEFAULT_POLICY,
   type DecisionResult,
   type Feedback,
@@ -48,6 +49,8 @@ let currentPolicy: Policy = DEFAULT_POLICY;
 let settings: Settings = { ...DEFAULT_SETTINGS };
 /** Working copy of rules for whichever editor is on screen. */
 let draftRules: Rule[] = [];
+/** Working copy of the custom-rule cutoff for the sliders. */
+let draftCustomThreshold = DEFAULT_CUSTOM_THRESHOLD;
 let enabled = true;
 
 const EXCEPTION_ID = "substantive_critique";
@@ -89,6 +92,7 @@ function draftPolicy(prefix: "ob" | "st"): Policy {
     revision: currentPolicy.revision,
     rules: draftRules,
     customInstruction: joinCustomInstruction(lessMore, alwaysKeep),
+    customThreshold: draftCustomThreshold,
   };
 }
 
@@ -139,16 +143,22 @@ function syncSliders(): void {
   for (const f of sliderSyncs) f();
 }
 
-function thresholdSlider(rule: Rule, onChange: () => void): HTMLElement {
+function rangeSlider(
+  get: () => number,
+  set: (v: number) => void,
+  onChange: () => void,
+  id?: string,
+): HTMLElement {
   const wrap = el("div");
   const slider = el("input", { type: "range", min: "0.5", max: "0.99", step: "0.01" }) as HTMLInputElement;
+  if (id) slider.id = id;
   const readout = el("span", { class: "mono" });
   const sync = () => {
-    slider.value = String(rule.hideThreshold ?? 0.85);
-    readout.textContent = ` ${(rule.hideThreshold ?? 0.85).toFixed(2)}`;
+    slider.value = String(get());
+    readout.textContent = ` ${get().toFixed(2)}`;
   };
   slider.addEventListener("input", () => {
-    rule.hideThreshold = Number(slider.value);
+    set(Number(slider.value));
     sync();
     for (const f of aggRerenders) f();
     onChange();
@@ -157,6 +167,33 @@ function thresholdSlider(rule: Rule, onChange: () => void): HTMLElement {
   sync();
   wrap.append(slider, readout);
   return wrap;
+}
+
+function thresholdSlider(rule: Rule, onChange: () => void): HTMLElement {
+  return rangeSlider(
+    () => rule.hideThreshold ?? 0.85,
+    (v) => (rule.hideThreshold = v),
+    onChange,
+  );
+}
+
+/** Mount the custom-rule confidence slider into `<prefix>-customth-mount`. */
+function mountCustomThreshold(prefix: "ob" | "st", onChange: () => void): void {
+  const mount = $(`${prefix}-customth-mount`);
+  mount.replaceChildren();
+  mount.append(
+    el(
+      "label",
+      {},
+      "Hide when confidence ≥ ",
+      rangeSlider(
+        () => draftCustomThreshold,
+        (v) => (draftCustomThreshold = v),
+        onChange,
+        `${prefix}-customth`,
+      ),
+    ),
+  );
 }
 
 interface ModelInputs {
@@ -321,6 +358,9 @@ function renderOnboarding(): void {
   ($("ob-lessmore") as HTMLTextAreaElement).value = lessMore;
   ($("ob-alwayskeep") as HTMLTextAreaElement).value = alwaysKeep;
 
+  draftCustomThreshold = currentPolicy.customThreshold ?? DEFAULT_CUSTOM_THRESHOLD;
+  mountCustomThreshold("ob", schedulePreview);
+
   obModel = buildModelSection($("ob-model"), settings);
   void updatePreview();
 }
@@ -334,6 +374,7 @@ async function saveOnboarding(): Promise<void> {
         ($("ob-lessmore") as HTMLTextAreaElement).value,
         ($("ob-alwayskeep") as HTMLTextAreaElement).value,
       ),
+      customThreshold: draftCustomThreshold,
     });
     const res = await send({ type: "SAVE_POLICY", policy: next });
     if (res === undefined) {
@@ -408,6 +449,9 @@ function renderSettings(): void {
   ak.value = alwaysKeep;
   lm.oninput = ak.oninput = () => renderPromptPanel();
 
+  draftCustomThreshold = currentPolicy.customThreshold ?? DEFAULT_CUSTOM_THRESHOLD;
+  mountCustomThreshold("st", renderPromptPanel);
+
   stModel = buildModelSection($("st-model"), settings);
   renderPromptPanel();
 }
@@ -439,6 +483,7 @@ async function saveSettings(): Promise<void> {
         ($("st-lessmore") as HTMLTextAreaElement).value,
         ($("st-alwayskeep") as HTMLTextAreaElement).value,
       ),
+      customThreshold: draftCustomThreshold,
     });
     const res = await send({ type: "SAVE_POLICY", policy: next });
     if (res === undefined) {

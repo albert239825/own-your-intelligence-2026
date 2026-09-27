@@ -83,6 +83,7 @@ export function makeResult(
   snapshot: PostSnapshot,
   disposition: Disposition,
   policyRevision = 1,
+  causeRuleIds?: string[],
 ): DecisionResult {
   return {
     requestId: `req-${snapshot.postId}`,
@@ -91,7 +92,7 @@ export function makeResult(
     policyRevision,
     modelVersion: "test",
     disposition,
-    causeRuleIds: disposition === "hide" ? ["rage_bait"] : [],
+    causeRuleIds: causeRuleIds ?? (disposition === "hide" ? ["rage_bait"] : []),
     exceptionRuleIds: [],
     probabilities: {},
     source: "model",
@@ -125,10 +126,10 @@ export function fakeClassify() {
       return calls.filter((c) => c.snapshot.postId === postId);
     },
     /** Resolve the oldest pending call for postId. */
-    resolve(postId: string, disposition: Disposition, policyRevision?: number) {
+    resolve(postId: string, disposition: Disposition, policyRevision?: number, causeRuleIds?: string[]) {
       const p = pending.get(postId)?.shift();
       if (!p) throw new Error(`no pending classify for ${postId}`);
-      p.resolve(makeResult(p.snapshot, disposition, policyRevision ?? p.policyRevision));
+      p.resolve(makeResult(p.snapshot, disposition, policyRevision ?? p.policyRevision, causeRuleIds));
     },
     reject(postId: string, e: unknown) {
       const p = pending.get(postId)?.shift();

@@ -111,6 +111,7 @@ export const RULE_BLURBS: Record<string, { catches: string; spares: string }> = 
 export interface PolicyDraft {
   rules: Rule[];
   customInstruction?: string;
+  customThreshold?: number;
 }
 
 /**
@@ -124,6 +125,8 @@ export function nextPolicy(current: Policy, draft: PolicyDraft): Policy {
     revision: current.revision + 1,
     rules: draft.rules,
     customInstruction,
+    // The threshold only means something with a custom instruction.
+    customThreshold: customInstruction ? draft.customThreshold : undefined,
   });
 }
 

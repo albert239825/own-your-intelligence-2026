@@ -109,6 +109,17 @@ describe("evaluate", () => {
     expect(r.disposition).toBe("hide");
     expect(r.causeRuleIds).toEqual(["custom"]);
   });
+
+  it("customThreshold controls the custom rule cutoff (default 0.85)", () => {
+    const base: Policy = { ...DEFAULT_POLICY, customInstruction: "hide posts about crypto" };
+    const custom = probs({ custom: 0.7 });
+    // Default threshold 0.85: 0.7 does not hide.
+    expect(evaluate({ post, policy: base, probabilities: custom, enabled: true }).disposition).toBe("show");
+    // customThreshold 0.6: same probability hides.
+    const lowered = evaluate({ post, policy: { ...base, customThreshold: 0.6 }, probabilities: custom, enabled: true });
+    expect(lowered.disposition).toBe("hide");
+    expect(lowered.causeRuleIds).toEqual(["custom"]);
+  });
 });
 
 describe("requiredRuleIds", () => {

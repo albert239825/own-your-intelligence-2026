@@ -1,5 +1,6 @@
 import type { Feedback, Policy } from "../contracts";
 import { TASK_INSTRUCTION } from "../policy/compile";
+import { hideRules } from "../policy/evaluate";
 
 export interface TrainingRecord {
   state: { post_text: string; quoted_text?: string };
@@ -23,8 +24,8 @@ export interface TrainingRecord {
  * emits nothing (it edits the policy rather than labeling the post).
  */
 export function buildTrainingRecords(policy: Policy, feedback: Feedback[]): TrainingRecord[] {
-  const hideRules = policy.rules.filter((r) => r.enabled && r.hideThreshold !== undefined);
-  const byId = new Map(hideRules.map((r) => [r.id, r]));
+  const rules = hideRules(policy);
+  const byId = new Map(rules.map((r) => [r.id, r]));
   const records: TrainingRecord[] = [];
 
   const emit = (fb: Feedback, ruleId: string, label: 0 | 1) => {
@@ -60,7 +61,7 @@ export function buildTrainingRecords(policy: Policy, feedback: Feedback[]): Trai
         break;
       case "confirm_show":
         // Positive confirmation: post is a negative example for every hide rule.
-        for (const rule of hideRules) emit(fb, rule.id, 0);
+        for (const rule of rules) emit(fb, rule.id, 0);
         break;
       case "change_preference":
         break;

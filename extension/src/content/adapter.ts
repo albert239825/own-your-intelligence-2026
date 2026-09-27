@@ -1,10 +1,12 @@
 import {
+  CUSTOM_RULE_ID,
   EXTRACTOR_VERSION,
   type DecisionResult,
   type Feedback,
   type Policy,
   type PostSnapshot,
 } from "../contracts";
+import { hideRules } from "../policy/evaluate";
 
 export type FeedbackDraft = Omit<Feedback, "feedbackId" | "createdAt">;
 
@@ -229,7 +231,15 @@ export function renderCollapsed(
   panel.hidden = true;
 
   const ruleId = result.causeRuleIds[0];
-  const rule = ruleId ? handlers.policy?.()?.rules.find((r) => r.id === ruleId) : undefined;
+  // The synthetic `custom` rule isn't in policy.rules — pull it from
+  // hideRules() so the chip works for custom-rule hides too.
+  const rule = ruleId
+    ? ruleId === CUSTOM_RULE_ID
+      ? hideRules(handlers.policy?.() ?? { schemaVersion: 1, revision: 0, rules: [] }).find(
+          (r) => r.id === CUSTOM_RULE_ID,
+        )
+      : handlers.policy?.()?.rules.find((r) => r.id === ruleId)
+    : undefined;
   const change = mkButton("Change the filter", () => {
     if (!rule) return;
     if (!panel.hidden) {
@@ -259,13 +269,21 @@ export function renderCollapsed(
       if (!policy) return;
       const instruction = textarea.value.trim() || rule.instruction;
       const hideThreshold = Number(slider.value);
-      const next: Policy = {
-        ...policy,
-        revision: policy.revision + 1,
-        rules: policy.rules.map((r) =>
-          r.id === rule.id ? { ...r, instruction, hideThreshold } : r,
-        ),
-      };
+      const next: Policy =
+        rule.id === CUSTOM_RULE_ID
+          ? {
+              ...policy,
+              revision: policy.revision + 1,
+              customInstruction: instruction,
+              customThreshold: hideThreshold,
+            }
+          : {
+              ...policy,
+              revision: policy.revision + 1,
+              rules: policy.rules.map((r) =>
+                r.id === rule.id ? { ...r, instruction, hideThreshold } : r,
+              ),
+            };
       handlers.onCorrect(
         feedbackFor(snapshot, result, "change_preference", "keep", {
           ruleId: rule.id,
