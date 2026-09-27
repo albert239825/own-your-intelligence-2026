@@ -51,8 +51,9 @@ export function ensureStyle(): void {
   const style = document.createElement("style");
   style.setAttribute(AF_OWNED, "");
   style.textContent = `
-    .${AF_COLLAPSED} > *:not([${AF_OWNED}]) { display: none !important; }
-    .${AF_HOST} { position: relative; }
+    .${AF_COLLAPSED} > *:not([${AF_OWNED}]),
+    [data-af-state="collapsed"] > *:not([${AF_OWNED}]) { display: none !important; }
+    .${AF_HOST}, [data-af-state="shown"] { position: relative; }
     [${AF_OWNED}][hidden], [${AF_OWNED}] [hidden] { display: none !important; }
     [${AF_OWNED}].af-placeholder {
       margin: 8px 12px; font: 13px/1.4 system-ui, sans-serif; color: inherit;
@@ -293,6 +294,7 @@ export function renderShown(
   clearOwned(node);
   ensureStyle();
   node.classList.add(AF_HOST);
+  node.setAttribute("data-af-state", "shown");
 
   const pill = document.createElement("button");
   pill.type = "button";
