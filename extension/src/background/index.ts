@@ -14,6 +14,7 @@ import {
 } from "../contracts";
 import { evaluate } from "../policy/evaluate";
 import { KevClassifier, MockClassifier } from "./classifier";
+import { appendCapped, withStore } from "./store";
 
 const HISTORY_LIMIT = 300;
 const MAX_IN_FLIGHT = 8;
@@ -41,11 +42,13 @@ async function storeSet(values: Record<string, unknown>): Promise<void> {
 }
 
 async function getPolicy(): Promise<Policy> {
-  const raw = await storeGet<unknown>("policy");
-  const parsed = PolicySchema.safeParse(raw);
-  if (parsed.success) return parsed.data;
-  await storeSet({ policy: DEFAULT_POLICY });
-  return DEFAULT_POLICY;
+  return withStore(async () => {
+    const raw = await storeGet<unknown>("policy");
+    const parsed = PolicySchema.safeParse(raw);
+    if (parsed.success) return parsed.data;
+    await storeSet({ policy: DEFAULT_POLICY });
+    return DEFAULT_POLICY;
+  });
 }
 async function getEnabled(): Promise<boolean> {
   return (await storeGet<boolean>("enabled")) ?? true;
@@ -60,15 +63,17 @@ async function getHistory(): Promise<DecisionResult[]> {
   return (await storeGet<DecisionResult[]>("history")) ?? [];
 }
 async function pushHistory(result: DecisionResult): Promise<void> {
-  const history = await getHistory();
-  history.unshift(result);
-  if (history.length > HISTORY_LIMIT) history.length = HISTORY_LIMIT;
-  await storeSet({ history });
+  await withStore(async () => {
+    const history = await getHistory();
+    await storeSet({ history: appendCapped(history, result, HISTORY_LIMIT) });
+  });
 }
 async function appendFeedback(fb: Feedback): Promise<void> {
-  const list = (await storeGet<Feedback[]>("feedback")) ?? [];
-  list.push(fb);
-  await storeSet({ feedback: list });
+  await withStore(async () => {
+    const list = (await storeGet<Feedback[]>("feedback")) ?? [];
+    list.push(fb);
+    await storeSet({ feedback: list });
+  });
 }
 
 // ---- decision cache ------------------------------------------------------
@@ -210,9 +215,11 @@ chrome.runtime.onMessage.addListener((raw: unknown, _sender, sendResponse) => {
         sendResponse({ ok: true });
         break;
       case "SET_OVERRIDE": {
-        const overrides = await getOverrides();
-        overrides[msg.override.postId] = msg.override;
-        await storeSet({ overrides });
+        await withStore(async () => {
+          const overrides = await getOverrides();
+          overrides[msg.override.postId] = msg.override;
+          await storeSet({ overrides });
+        });
         sendResponse({ ok: true });
         break;
       }
