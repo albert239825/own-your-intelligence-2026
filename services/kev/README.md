@@ -78,6 +78,12 @@ accepted unchanged and is already a valid Kev System One request:
 Kev renders `state` and `instructions` objects as `key: value` lines; the adapter
 drops empty optional state fields so the model never sees a bare `quoted_text:`.
 
+CORS is open (`Access-Control-Allow-Origin: *`, `Authorization`/`Content-Type`
+allowed). The extension's service-worker `fetch` is CORS-checked until the user
+grants the optional host permission for the endpoint, and the options page
+does not request it today, so without these headers every call fails at the
+preflight. The bearer token is the access control, not the origin.
+
 Kev's native answer is `{"type": "noul", "noul": p}`. The extension reads
 `answers[id].probability`, so the adapter returns both:
 
