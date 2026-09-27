@@ -1,0 +1,253 @@
+{
+  "backend": "https://albert23982--attention-filter-kev-api.modal.run",
+  "data": "holdout.jsonl",
+  "n": 10,
+  "per_rule": {
+    "rage_bait": {
+      "threshold": 0.85,
+      "tp": 0,
+      "fp": 0,
+      "fn": 1,
+      "precision": null,
+      "recall": 0.0,
+      "min_positive": 0.708,
+      "max_negative": 0.4193
+    },
+    "hype": {
+      "threshold": 0.85,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "precision": null,
+      "recall": 0.0,
+      "min_positive": 0.6041,
+      "max_negative": 0.4476
+    },
+    "engagement_farming": {
+      "threshold": 0.9,
+      "tp": 0,
+      "fp": 0,
+      "fn": 2,
+      "precision": null,
+      "recall": 0.0,
+      "min_positive": 0.6747,
+      "max_negative": 0.143
+    },
+    "substantive_critique": {
+      "threshold": 0.7,
+      "tp": 3,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "min_positive": 0.8306,
+      "max_negative": 0.2636
+    }
+  },
+  "hide": {
+    "precision": null,
+    "recall": 0.0,
+    "tp": 0,
+    "fp": 0,
+    "fn": 5
+  },
+  "disagreement_retention": {
+    "value": 1.0,
+    "retained": 3,
+    "total": 3
+  },
+  "disposition_agreement": 0.5,
+  "uncertain": 0,
+  "rows": [
+    {
+      "id": "h-ai-hype-01",
+      "topic": "ai",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 1,
+        "engagement_farming": 0,
+        "substantive_critique": 0
+      },
+      "expected_disposition": "hide",
+      "probabilities": {
+        "rage_bait": 0.4193,
+        "hype": 0.6041,
+        "engagement_farming": 0.143,
+        "substantive_critique": 0.0655
+      },
+      "disposition": "show",
+      "latency_ms": 34.1
+    },
+    {
+      "id": "h-ai-critique-01",
+      "topic": "ai",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 0,
+        "engagement_farming": 0,
+        "substantive_critique": 1
+      },
+      "expected_disposition": "show",
+      "probabilities": {
+        "rage_bait": 0.0629,
+        "hype": 0.3281,
+        "engagement_farming": 0.0923,
+        "substantive_critique": 0.8306
+      },
+      "disposition": "show",
+      "latency_ms": 34.7
+    },
+    {
+      "id": "h-pol-rage-01",
+      "topic": "politics",
+      "expected": {
+        "rage_bait": 1,
+        "hype": 0,
+        "engagement_farming": 0,
+        "substantive_critique": 0
+      },
+      "expected_disposition": "hide",
+      "probabilities": {
+        "rage_bait": 0.708,
+        "hype": 0.2763,
+        "engagement_farming": 0.1306,
+        "substantive_critique": 0.2636
+      },
+      "disposition": "show",
+      "latency_ms": 34.1
+    },
+    {
+      "id": "h-pol-disagree-01",
+      "topic": "politics",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 0,
+        "engagement_farming": 0,
+        "substantive_critique": 1
+      },
+      "expected_disposition": "show",
+      "probabilities": {
+        "rage_bait": 0.0768,
+        "hype": 0.2727,
+        "engagement_farming": 0.0691,
+        "substantive_critique": 0.9052
+      },
+      "disposition": "show",
+      "latency_ms": 34.8
+    },
+    {
+      "id": "h-prod-hype-01",
+      "topic": "product",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 1,
+        "engagement_farming": 0,
+        "substantive_critique": 0
+      },
+      "expected_disposition": "hide",
+      "probabilities": {
+        "rage_bait": 0.0748,
+        "hype": 0.6989,
+        "engagement_farming": 0.1294,
+        "substantive_critique": 0.0499
+      },
+      "disposition": "show",
+      "latency_ms": 34.1
+    },
+    {
+      "id": "h-prod-bench-01",
+      "topic": "product",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 0,
+        "engagement_farming": 0,
+        "substantive_critique": 1
+      },
+      "expected_disposition": "show",
+      "probabilities": {
+        "rage_bait": 0.0442,
+        "hype": 0.3603,
+        "engagement_farming": 0.0588,
+        "substantive_critique": 0.8754
+      },
+      "disposition": "show",
+      "latency_ms": 34.7
+    },
+    {
+      "id": "h-farm-01",
+      "topic": "farming",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 0,
+        "engagement_farming": 1,
+        "substantive_critique": 0
+      },
+      "expected_disposition": "hide",
+      "probabilities": {
+        "rage_bait": 0.071,
+        "hype": 0.3507,
+        "engagement_farming": 0.6883,
+        "substantive_critique": 0.0285
+      },
+      "disposition": "show",
+      "latency_ms": 32.8
+    },
+    {
+      "id": "h-farm-02",
+      "topic": "farming",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 0,
+        "engagement_farming": 1,
+        "substantive_critique": 0
+      },
+      "expected_disposition": "hide",
+      "probabilities": {
+        "rage_bait": 0.1977,
+        "hype": 0.4476,
+        "engagement_farming": 0.6747,
+        "substantive_critique": 0.0459
+      },
+      "disposition": "show",
+      "latency_ms": 32.8
+    },
+    {
+      "id": "h-neutral-01",
+      "topic": "control",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 0,
+        "engagement_farming": 0,
+        "substantive_critique": 0
+      },
+      "expected_disposition": "show",
+      "probabilities": {
+        "rage_bait": 0.0422,
+        "hype": 0.2139,
+        "engagement_farming": 0.0875,
+        "substantive_critique": 0.0736
+      },
+      "disposition": "show",
+      "latency_ms": 32.9
+    },
+    {
+      "id": "h-neutral-02",
+      "topic": "control",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 0,
+        "engagement_farming": 0,
+        "substantive_critique": 0
+      },
+      "expected_disposition": "show",
+      "probabilities": {
+        "rage_bait": 0.034,
+        "hype": 0.1929,
+        "engagement_farming": 0.0839,
+        "substantive_critique": 0.2337
+      },
+      "disposition": "show",
+      "latency_ms": 33.9
+    }
+  ]
+}

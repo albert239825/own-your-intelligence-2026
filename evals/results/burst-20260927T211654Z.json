@@ -1,0 +1,51 @@
+{
+  "backend": "https://albert23982--attention-filter-kev-api.modal.run",
+  "rounds": 3,
+  "levels": [
+    {
+      "concurrency": 1,
+      "requests": 3,
+      "errors": [],
+      "server_ms": {
+        "p50": 20.4,
+        "p95": 20.580000000000002,
+        "n": 3
+      },
+      "rtt_ms": {
+        "p50": 152.13897800003906,
+        "p95": 152.31704120001268
+      },
+      "burst_wall_ms_mean": 151.04800566670443
+    },
+    {
+      "concurrency": 8,
+      "requests": 24,
+      "errors": [],
+      "server_ms": {
+        "p50": 127.3,
+        "p95": 154.4,
+        "n": 24
+      },
+      "rtt_ms": {
+        "p50": 428.76638749999074,
+        "p95": 737.1279434000201
+      },
+      "burst_wall_ms_mean": 550.4685940000323
+    },
+    {
+      "concurrency": 30,
+      "requests": 90,
+      "errors": [],
+      "server_ms": {
+        "p50": 331.9,
+        "p95": 359.7,
+        "n": 90
+      },
+      "rtt_ms": {
+        "p50": 745.3774179999755,
+        "p95": 931.1588316499636
+      },
+      "burst_wall_ms_mean": 859.5312523333405
+    }
+  ]
+}
