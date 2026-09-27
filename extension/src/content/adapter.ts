@@ -16,6 +16,9 @@ export interface RenderHandlers {
 
 export interface SiteAdapter {
   discover(root: ParentNode): Element[];
+  /** Sync fingerprint (postId + raw text + quoteText) of what a node shows,
+   *  or null when it has no postId. Used for recycle/stale detection. */
+  fingerprint(node: Element): string | null;
   extract(node: Element): Promise<PostSnapshot | null>;
   render(node: Element, result: DecisionResult, handlers: RenderHandlers): void;
   restore(node: Element): void;
@@ -76,6 +79,8 @@ export function renderCollapsed(
 
   const placeholder = document.createElement("div");
   placeholder.setAttribute(AF_OWNED, "");
+  placeholder.setAttribute("role", "group");
+  placeholder.setAttribute("aria-label", "Attention Filter placeholder");
   placeholder.className = "af-placeholder";
 
   const titles = result.causeRuleIds.length
@@ -98,6 +103,7 @@ export function renderCollapsed(
   // UI-only: unhides this render, nothing is learned or stored.
   reveal.addEventListener("click", () => {
     node.classList.remove(AF_COLLAPSED);
+    node.removeAttribute("data-af-state");
     placeholder.remove();
   });
 
@@ -106,6 +112,7 @@ export function renderCollapsed(
   keep.addEventListener("click", () => {
     handlers.onKeep(snapshot);
     node.classList.remove(AF_COLLAPSED);
+    node.removeAttribute("data-af-state");
     placeholder.remove();
   });
 
@@ -159,11 +166,14 @@ export function renderCollapsed(
 
   placeholder.append(rules, note, reveal, keep, correct, panel);
   node.classList.add(AF_COLLAPSED);
+  node.setAttribute("data-af-state", "collapsed");
   node.prepend(placeholder);
 }
 
 export function restoreNode(node: Element): void {
   node.classList.remove(AF_COLLAPSED);
+  node.removeAttribute("data-af-state");
+  node.querySelectorAll(`.${AF_COLLAPSED}`).forEach((el) => el.classList.remove(AF_COLLAPSED));
   node.querySelectorAll(`[${AF_OWNED}]`).forEach((el) => el.remove());
 }
 
@@ -176,6 +186,15 @@ export function restoreNode(node: Element): void {
 export const fixtureAdapter: SiteAdapter = {
   discover(root) {
     return [...root.querySelectorAll("article[data-post-id]")];
+  },
+
+  fingerprint(node) {
+    const article = node as HTMLElement;
+    const postId = article.dataset.postId;
+    if (!postId) return null;
+    const text = article.querySelector(".post-text")?.textContent?.trim() ?? "";
+    const quoteText = article.querySelector(".quote-text")?.textContent?.trim() ?? "";
+    return `${postId}\u0000${text}\u0000${quoteText}`;
   },
 
   async extract(node) {

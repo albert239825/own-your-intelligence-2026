@@ -1,0 +1,48 @@
+<!--
+  ASSUMED logged-in DOM — not captured; verify on a logged-in laptop.
+  Hand-written from documented X app markup (data-testid attributes). Covers:
+  a normal tweet with an emoji <img alt> and a show-more link, a tweet with a
+  quoted tweet inside div[role="link"], a skeleton article (no tweetText, no
+  status link), a skeleton with a status link but no text, and a promoted
+  tweet wrapped in [data-testid="placementTracking"].
+-->
+<article data-testid="tweet" role="article">
+  <div><div><a href="/alice"><img alt="@alice" src="AVATAR"></a><a href="/alice"><span>Alice</span></a><a href="/alice"><span>@alice</span></a></div>
+    <a href="/alice/status/1001"><time datetime="2026-09-27T10:00:00.000Z">Sep 27</time></a></div>
+  <div data-testid="tweetText" dir="auto"><span>Shipping the filter today </span><img alt="🚀" src="EMOJI"><span> finally.</span><a data-testid="tweet-text-show-more-link" href="/alice/status/1001">Show more</a></div>
+  <div role="group"><div data-testid="reply"></div><div data-testid="retweet"></div><div data-testid="like"></div></div>
+</article>
+
+<!-- ARTICLE -->
+
+<article data-testid="tweet" role="article">
+  <div><a href="/bob"><img alt="@bob" src="AVATAR"></a><a href="/bob/status/2002"><time datetime="2026-09-27T11:00:00.000Z">Sep 27</time></a></div>
+  <div data-testid="tweetText" dir="auto"><span>worth reading</span></div>
+  <div role="link" tabindex="0">
+    <div><a href="/carol"><span>Carol</span></a><a href="/carol/status/3003"><time datetime="2026-09-26T09:00:00.000Z">Sep 26</time></a></div>
+    <div data-testid="tweetText" dir="auto"><span>the quoted tweet body</span></div>
+  </div>
+  <div role="group"><div data-testid="reply"></div></div>
+</article>
+
+<!-- ARTICLE -->
+
+<article data-testid="tweet" role="article">
+  <div><div><span></span></div></div>
+</article>
+
+<!-- ARTICLE -->
+
+<article data-testid="tweet" role="article">
+  <div><a href="/dave/status/4004"><time datetime="2026-09-27T12:00:00.000Z">Sep 27</time></a></div>
+</article>
+
+<!-- ARTICLE -->
+
+<div data-testid="placementTracking">
+  <article data-testid="tweet" role="article">
+    <div><a href="/brand/status/5005"><time datetime="2026-09-27T13:00:00.000Z">Sep 27</time></a></div>
+    <div data-testid="tweetText" dir="auto"><span>Try our new thing</span></div>
+    <div role="group"><div data-testid="reply"></div></div>
+  </article>
+</div>
