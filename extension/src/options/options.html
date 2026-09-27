@@ -2,47 +2,118 @@
 <html>
 <head>
   <meta charset="utf-8" />
-  <title>Attention Filter — settings</title>
-  <style>
-    body { font: 14px/1.5 system-ui, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; }
-    .rule { border: 1px solid #ccc; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
-    textarea { width: 100%; min-height: 64px; font: inherit; }
-    input[type=text], input[type=password] { width: 100%; font: inherit; padding: 4px; }
-    button { padding: 6px 14px; margin-right: 8px; cursor: pointer; }
-    h2 { margin-top: 32px; }
-    .status { color: green; }
-    table { border-collapse: collapse; width: 100%; }
-    td, th { border-bottom: 1px solid #eee; padding: 4px; text-align: left; font-size: 13px; }
-  </style>
+  <title>Attention Filter</title>
+  <link rel="stylesheet" href="options.css" />
 </head>
 <body>
-  <h1>Attention Filter</h1>
-  <p>Set the rules your feed is filtered by. Instructions are sent to the model verbatim.</p>
+  <nav class="top">
+    <h1>Attention Filter</h1>
+    <a href="#settings" id="nav-settings">Settings</a>
+    <a href="#review" id="nav-review">Review hidden posts</a>
+    <span class="spacer"></span>
+    <span class="pill" id="enabled-pill">…</span>
+    <button id="toggle-enabled">Toggle</button>
+  </nav>
 
-  <h2>Rules</h2>
-  <div id="rules"></div>
+  <main>
+    <section id="view-onboarding" class="view">
+      <div class="cols">
+        <div>
+          <div class="card">
+            <h2><span class="step-num">1</span>What do you want less of?</h2>
+            <p class="muted">Checked rules hide matching posts when the model is confident enough.</p>
+            <div id="ob-rules"></div>
+            <h3>Aggressiveness</h3>
+            <div class="seg" id="ob-aggr"></div>
+            <p class="muted" id="ob-aggr-hint"></p>
+            <details>
+              <summary>Advanced: edit rule wording and thresholds</summary>
+              <div id="ob-advanced"></div>
+            </details>
+          </div>
 
-  <h2>Custom filter</h2>
-  <p>Anything else you want hidden (or kept)? One free-text instruction becomes one extra rule.</p>
-  <textarea id="custom" placeholder="e.g. Hide posts about crypto giveaways"></textarea>
+          <div class="card">
+            <h2><span class="step-num">2</span>What should always stay?</h2>
+            <div id="ob-exceptions"></div>
+            <label>Topics or people to never hide
+              <textarea id="ob-alwayskeep" placeholder="e.g. my local football club, colleagues' announcements"></textarea>
+            </label>
+            <p class="muted">Today this is added to your custom instruction as text; there is no separate allowlist yet.</p>
+            <label>In your own words, what do you want to see less of / more of?
+              <textarea id="ob-lessmore" placeholder="e.g. Less crypto giveaways, more long-form technical writing"></textarea>
+            </label>
+          </div>
 
-  <h2>Endpoint</h2>
-  <label>Classifier
-    <select id="classifier">
-      <option value="mock">mock (local keywords)</option>
-      <option value="kev">kev (remote endpoint)</option>
-    </select>
-  </label>
-  <label>Endpoint URL <input type="text" id="endpoint" placeholder="https://...modal.run" /></label>
-  <label>Token <input type="password" id="token" /></label>
+          <div class="card">
+            <h2><span class="step-num">3</span>Model</h2>
+            <div id="ob-model"></div>
+          </div>
 
-  <p><button id="save">Save</button> <span id="status" class="status"></span></p>
+          <div class="sticky-foot">
+            <button class="primary" id="ob-save">Save and finish</button>
+            <span id="ob-status"></span>
+          </div>
+        </div>
 
-  <h2>Review history</h2>
-  <p><button id="refresh-history">Refresh</button>
-     <button id="clear-history">Clear history</button>
-     <button id="export">Export JSON (policy + feedback, no token)</button></p>
-  <table id="history"><thead><tr><th>Post</th><th>Disposition</th><th>Rules</th><th></th></tr></thead><tbody></tbody></table>
+        <div class="preview">
+          <div class="card">
+            <h3>Preview: what happens to these 3 posts</h3>
+            <div id="ob-preview"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="view-settings" class="view">
+      <div class="card">
+        <h2>Rules</h2>
+        <div class="seg" id="st-aggr"></div>
+        <p class="muted" id="st-aggr-hint"></p>
+        <table class="rules"><tbody id="st-rules"></tbody></table>
+      </div>
+
+      <div class="card">
+        <h2>Custom instruction</h2>
+        <label>Topics or people to never hide
+          <textarea id="st-alwayskeep"></textarea>
+        </label>
+        <p class="muted">Today this is added to your custom instruction as text; there is no separate allowlist yet.</p>
+        <label>In your own words, what do you want to see less of / more of?
+          <textarea id="st-lessmore"></textarea>
+        </label>
+      </div>
+
+      <div class="card">
+        <h2>What the model is asked</h2>
+        <div id="prompt-panel"></div>
+      </div>
+
+      <div class="card">
+        <h2>Model</h2>
+        <div id="st-model"></div>
+      </div>
+
+      <p>
+        <button class="primary" id="st-save">Save</button>
+        <button id="st-reonboard">Re-run onboarding</button>
+        <button id="st-export">Export JSON</button>
+        <button id="st-import">Import JSON</button>
+        <input type="file" id="st-import-file" accept="application/json" hidden />
+      </p>
+      <p id="st-status"></p>
+    </section>
+
+    <section id="view-review" class="view">
+      <p class="muted">Keep this post = exact override for this post only; it will be shown again on this feed. Feedback (should've / shouldn't have been hidden) is saved locally for later model tuning — it does not change the model today.</p>
+      <p>
+        <button id="rv-refresh">Refresh</button>
+        <button id="rv-clear">Clear history</button>
+        <button id="rv-export">Export JSON</button>
+      </p>
+      <div id="rv-list"></div>
+      <p id="rv-empty" class="muted" hidden>Nothing hidden yet. Open the fixture feed or X with filtering on.</p>
+    </section>
+  </main>
 
   <script src="options/options.js"></script>
 </body>
