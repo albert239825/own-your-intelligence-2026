@@ -118,6 +118,16 @@
         <button id="rv-training-export">Export training data (JSONL)</button>
       </p>
       <p id="rv-summary" class="mono muted"></p>
+      <div class="card">
+        <h3>Fine-tune the model on these actions</h3>
+        <p class="muted">Sends this bundle to your endpoint, which trains a River checkpoint and promotes it only if it beats the current model on a held-out set. Your posts leave the browser when you click this.</p>
+        <p>
+          <button id="rv-finetune">Fine-tune on these actions</button>
+          <button id="rv-job-refresh">Refresh job status</button>
+        </p>
+        <p id="rv-job-status" class="muted"></p>
+        <div id="rv-job-detail"></div>
+      </div>
       <div id="rv-list"></div>
       <p id="rv-empty" class="muted" hidden>No actions yet. Use Hide / Good on shown posts, or Keep this post / Good call on hidden ones.</p>
     </section>

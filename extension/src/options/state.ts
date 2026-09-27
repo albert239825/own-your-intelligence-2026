@@ -9,6 +9,7 @@ import {
   type DecisionResult,
   type Disposition,
   type Feedback,
+  type HistoryEntry,
   type Override,
   type Policy,
   type PostSnapshot,
@@ -235,6 +236,7 @@ export interface ExportBundle {
   policy: Policy;
   feedback: Feedback[];
   overrides: Record<string, Override>;
+  history?: HistoryEntry[];
 }
 
 /** Never includes token/endpoint — those live in settings, not the bundle. */
@@ -242,12 +244,14 @@ export function buildExport(
   policy: Policy,
   feedback: Feedback[],
   overrides: Record<string, Override>,
+  history?: HistoryEntry[],
 ): ExportBundle {
   return {
     exportedAt: new Date().toISOString(),
     policy,
     feedback,
     overrides,
+    ...(history ? { history } : {}),
   };
 }
 

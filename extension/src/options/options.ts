@@ -2,6 +2,7 @@ import {
   DEFAULT_CUSTOM_THRESHOLD,
   DEFAULT_POLICY,
   type Feedback,
+  type HistoryEntry,
   type Override,
   type Policy,
   type Rule,
@@ -24,6 +25,14 @@ import {
   type Settings,
 } from "./state";
 import { buildTrainingRecords, toJsonl } from "./training";
+import {
+  datasetLine,
+  getJob,
+  isTerminal,
+  jobStatusLine,
+  startTraining,
+  type TrainJob,
+} from "./finetune";
 
 function send<T>(msg: unknown): Promise<T | undefined> {
   return chrome.runtime.sendMessage(msg).then((r) => (r?.ok ? r : undefined));
@@ -619,6 +628,76 @@ async function renderReview(): Promise<void> {
     card.append(removeBtn);
     host.append(card);
   }
+  void resumeLastJob();
+}
+
+// ---- fine-tune -----------------------------------------------------------
+
+const JOB_POLL_MS = 5000;
+let jobPollTimer: number | undefined;
+
+function renderJob(job: TrainJob): void {
+  $("rv-job-status").textContent = jobStatusLine(job);
+  const detail = $("rv-job-detail");
+  detail.replaceChildren();
+  const ds = datasetLine(job.dataset);
+  if (ds) detail.append(el("p", { class: "muted mono" }, ds));
+  if (job.checkpoint) detail.append(el("p", { class: "muted mono" }, job.checkpoint));
+}
+
+async function pollJob(jobId: string): Promise<void> {
+  window.clearTimeout(jobPollTimer);
+  const job = await getJob(settings, jobId).catch(() => undefined);
+  if (!job) {
+    $("rv-job-status").textContent = `Could not read job ${jobId}.`;
+    return;
+  }
+  renderJob(job);
+  if (!isTerminal(job.status)) {
+    jobPollTimer = window.setTimeout(() => void pollJob(jobId), JOB_POLL_MS);
+  }
+}
+
+async function startFineTune(): Promise<void> {
+  const btn = $("rv-finetune") as HTMLButtonElement;
+  const status = $("rv-job-status");
+  if (settings.classifier !== "kev" || settings.endpoint.trim().length === 0) {
+    status.textContent = "Set a model endpoint in Settings first — the mock model can't be trained.";
+    return;
+  }
+  btn.disabled = true;
+  status.textContent = "Sending your actions…";
+  const [polRes, histRes, store] = await Promise.all([
+    send<{ policy: Policy }>({ type: "GET_POLICY" }),
+    send<{ history: HistoryEntry[] }>({ type: "GET_HISTORY" }),
+    chrome.storage.local.get(["feedback", "overrides"]),
+  ]);
+  if (polRes?.policy) currentPolicy = polRes.policy;
+  const bundle = buildExport(
+    currentPolicy,
+    (store.feedback as Feedback[] | undefined) ?? [],
+    (store.overrides as Record<string, Override> | undefined) ?? {},
+    histRes?.history ?? [],
+  );
+  const res = await startTraining(settings, bundle);
+  btn.disabled = false;
+  if (!res.ok) {
+    status.textContent = res.error;
+    return;
+  }
+  await chrome.storage.local.set({ lastTrainJobId: res.jobId });
+  status.textContent = `Job ${res.jobId} queued…`;
+  $("rv-job-detail").replaceChildren(
+    ...(datasetLine(res.dataset) ? [el("p", { class: "muted mono" }, datasetLine(res.dataset))] : []),
+  );
+  void pollJob(res.jobId);
+}
+
+async function resumeLastJob(): Promise<void> {
+  const { lastTrainJobId } = await chrome.storage.local.get("lastTrainJobId");
+  if (typeof lastTrainJobId === "string" && settings.classifier === "kev") {
+    void pollJob(lastTrainJobId);
+  }
 }
 
 // ---- test a post ---------------------------------------------------------
@@ -758,6 +837,8 @@ for (const id of ["ts-text", "ts-quote"]) {
   });
 }
 $("rv-refresh").addEventListener("click", () => void renderReview());
+$("rv-finetune").addEventListener("click", () => void startFineTune());
+$("rv-job-refresh").addEventListener("click", () => void resumeLastJob());
 $("rv-clear-feedback").addEventListener("click", async () => {
   if (!confirm("Delete all saved actions? This clears the fine-tune dataset.")) return;
   await chrome.storage.local.set({ feedback: [] });
