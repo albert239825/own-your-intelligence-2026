@@ -2,19 +2,31 @@ import {
   EXTRACTOR_VERSION,
   type DecisionResult,
   type Feedback,
+  type Policy,
   type PostSnapshot,
 } from "../contracts";
+
+export type FeedbackDraft = Omit<Feedback, "feedbackId" | "createdAt">;
 
 export interface RenderHandlers {
   /** Display title for a rule id (from current policy). */
   ruleTitle: (ruleId: string) => string;
-  /** "Keep this post" -> SET_OVERRIDE. */
+  /** "Keep this post" -> SET_OVERRIDE keep. */
   onKeep: (snapshot: PostSnapshot) => void;
-  /** "Correct filter" confirmed -> SAVE_FEEDBACK. */
-  onCorrect: (feedback: Omit<Feedback, "feedbackId" | "createdAt">) => void;
-  /** Post was manually made visible (Reveal, or Keep which is a permanent
+  /** Any feedback chip confirmed -> SAVE_FEEDBACK. */
+  onCorrect: (feedback: FeedbackDraft) => void;
+  /** Post was manually made visible (bar click, or Keep which is a permanent
    *  override): controller remembers so a re-inserted copy stays visible. */
   onReveal?: (snapshot: PostSnapshot) => void;
+  /** Post was collapsed by the user (Good call / Hide): controller forgets
+   *  any reveal and caches `result` so a re-inserted copy re-collapses. */
+  onCollapse?: (snapshot: PostSnapshot, result: DecisionResult) => void;
+  /** "Hide" on a shown post -> SET_OVERRIDE hide. */
+  onHide?: (snapshot: PostSnapshot) => void;
+  /** Current policy, for the Hide menu and the Change-the-filter panel. */
+  policy?: () => Policy | undefined;
+  /** "Change the filter" saved -> SAVE_POLICY (same path as the options page). */
+  onSavePolicy?: (policy: Policy) => void;
 }
 
 export interface SiteAdapter {
@@ -30,6 +42,7 @@ export interface SiteAdapter {
 
 export const AF_OWNED = "data-af-owned";
 export const AF_COLLAPSED = "af-collapsed";
+export const AF_HOST = "af-host";
 
 let styleInjected = false;
 export function ensureStyle(): void {
@@ -39,22 +52,54 @@ export function ensureStyle(): void {
   style.setAttribute(AF_OWNED, "");
   style.textContent = `
     .${AF_COLLAPSED} > *:not([${AF_OWNED}]) { display: none !important; }
+    .${AF_HOST} { position: relative; }
     [${AF_OWNED}].af-placeholder {
-      border: 1px solid #536471; border-radius: 12px; padding: 12px 16px;
-      margin: 8px 12px; font: 14px/1.4 system-ui, sans-serif; color: #e7e9ea;
-      background: #16181c;
+      margin: 8px 12px; font: 13px/1.4 system-ui, sans-serif; color: inherit;
     }
-    [${AF_OWNED}] .af-rules { font-weight: 600; margin-bottom: 4px; }
-    [${AF_OWNED}] .af-note { color: #71767b; font-size: 12px; margin-bottom: 8px; }
-    [${AF_OWNED}] button {
-      margin-right: 8px; padding: 4px 12px; border-radius: 9999px;
-      border: 1px solid #536471; background: transparent; color: #1d9bf0;
-      cursor: pointer; font: inherit;
+    [${AF_OWNED}] .af-bar {
+      display: block; width: 100%; box-sizing: border-box; text-align: left;
+      padding: 8px 14px; border-radius: 12px; cursor: pointer; font: inherit;
+      color: inherit; opacity: 0.75;
+      border: 1px solid rgba(128,128,128,0.45); background: rgba(128,128,128,0.08);
     }
-    [${AF_OWNED}] .af-correct-panel { margin-top: 8px; }
-    [${AF_OWNED}] .af-correct-panel textarea {
-      display: block; width: 95%; margin: 6px 0; min-height: 48px;
-      background: #000; color: #e7e9ea; border: 1px solid #536471; border-radius: 8px;
+    [${AF_OWNED}] .af-bar:hover { opacity: 1; }
+    [${AF_OWNED}] .af-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    [${AF_OWNED}] .af-chips button, [${AF_OWNED}] .af-panel button, [${AF_OWNED}] .af-menu button {
+      padding: 3px 10px; border-radius: 9999px; cursor: pointer; font: inherit; font-size: 12px;
+      border: 1px solid rgba(128,128,128,0.45); background: transparent; color: #1d9bf0;
+    }
+    [${AF_OWNED}] .af-panel {
+      margin-top: 8px; padding: 10px 12px; border-radius: 12px;
+      border: 1px solid rgba(128,128,128,0.45);
+    }
+    [${AF_OWNED}] .af-panel .af-panel-title { font-weight: 600; margin-bottom: 6px; }
+    [${AF_OWNED}] .af-panel textarea {
+      display: block; width: 100%; box-sizing: border-box; margin: 4px 0 8px; min-height: 56px;
+      font: inherit; font-size: 12px; color: inherit; background: rgba(128,128,128,0.08);
+      border: 1px solid rgba(128,128,128,0.45); border-radius: 8px; padding: 6px;
+    }
+    [${AF_OWNED}] .af-panel label { display: block; font-size: 12px; opacity: 0.8; }
+    [${AF_OWNED}] .af-panel input[type=range] { width: 100%; margin: 4px 0 8px; }
+    [${AF_OWNED}] .af-panel .af-actions { display: flex; gap: 6px; }
+    [${AF_OWNED}].af-hide-pill {
+      position: absolute; top: 6px; right: 8px; z-index: 5; padding: 1px 8px;
+      border-radius: 9999px; font: 11px/1.5 system-ui, sans-serif; cursor: pointer;
+      color: inherit; opacity: 0.45; background: rgba(128,128,128,0.15);
+      border: 1px solid rgba(128,128,128,0.4);
+    }
+    [${AF_OWNED}].af-hide-pill:hover, [${AF_OWNED}].af-hide-pill[aria-expanded="true"] { opacity: 1; }
+    [${AF_OWNED}].af-menu {
+      position: absolute; top: 30px; right: 8px; z-index: 6; min-width: 180px;
+      display: flex; flex-direction: column; gap: 4px; padding: 8px;
+      border-radius: 12px; font: 13px/1.4 system-ui, sans-serif; color: inherit;
+      background: #16181c; border: 1px solid rgba(128,128,128,0.45);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+    }
+    @media (prefers-color-scheme: light) { [${AF_OWNED}].af-menu { background: #fff; } }
+    [${AF_OWNED}].af-menu button { text-align: left; }
+    [${AF_OWNED}].af-menu input {
+      font: inherit; font-size: 12px; padding: 4px 8px; border-radius: 8px; color: inherit;
+      background: rgba(128,128,128,0.08); border: 1px solid rgba(128,128,128,0.45);
     }
   `;
   document.documentElement.appendChild(style);
@@ -67,9 +112,43 @@ export async function contentHash(text: string, quoteText?: string): Promise<str
   return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/** Nodes the user confirmed ("Good call" / "Hide"): bar shows "· Noted" while mounted. */
+const noted = new WeakSet<Element>();
+
+function mkButton(label: string, onClick: () => void): HTMLButtonElement {
+  const b = document.createElement("button");
+  b.type = "button";
+  b.textContent = label;
+  b.addEventListener("click", (e) => {
+    e.stopPropagation();
+    onClick();
+  });
+  return b;
+}
+
+function feedbackFor(
+  snapshot: PostSnapshot,
+  result: DecisionResult,
+  kind: Feedback["kind"],
+  desiredAction: Feedback["desiredAction"],
+  extra: { ruleId?: string; explanation?: string } = {},
+): FeedbackDraft {
+  return {
+    postId: snapshot.postId,
+    contentHash: snapshot.contentHash,
+    text: snapshot.text,
+    kind,
+    desiredAction,
+    ruleId: "ruleId" in extra ? extra.ruleId : result.causeRuleIds[0],
+    explanation: extra.explanation,
+    policyRevision: result.policyRevision,
+  };
+}
+
 /**
- * Collapse a post: hide its children, insert our placeholder showing the
- * rule titles that fired, with Reveal / Keep this post / Correct filter.
+ * Collapse a post: hide its children behind a one-line bar
+ * (`Hidden · <rule> [· Noted]`). Clicking the bar expands the post in place
+ * and shows the Keep / Good call / Change the filter chips.
  */
 export function renderCollapsed(
   node: Element,
@@ -77,7 +156,7 @@ export function renderCollapsed(
   snapshot: PostSnapshot,
   handlers: RenderHandlers,
 ): void {
-  restoreNode(node);
+  clearOwned(node);
   ensureStyle();
 
   const placeholder = document.createElement("div");
@@ -89,97 +168,220 @@ export function renderCollapsed(
   const titles = result.causeRuleIds.length
     ? result.causeRuleIds.map((id) => handlers.ruleTitle(id)).join(", ")
     : result.disposition === "uncertain"
-      ? "Uncertain — needs review"
-      : "Attention Filter";
+      ? "Uncertain"
+      : "Other";
+  const barText = () =>
+    ["Hidden", titles, ...(noted.has(node) ? ["Noted"] : [])].join(" · ");
 
-  const rules = document.createElement("div");
-  rules.className = "af-rules";
-  rules.textContent = `Hidden: ${titles}`;
-  const note = document.createElement("div");
-  note.className = "af-note";
-  note.textContent = result.disposition === "hide"
-    ? "Collapsed by your filter rules."
-    : `Disposition: ${result.disposition}`;
+  const bar = document.createElement("button");
+  bar.type = "button";
+  bar.className = "af-bar";
+  bar.setAttribute("aria-expanded", "false");
+  bar.textContent = barText();
 
-  const reveal = document.createElement("button");
-  reveal.textContent = "Reveal";
-  // UI-only: unhides this render, nothing is learned or stored.
-  reveal.addEventListener("click", () => {
-    handlers.onReveal?.(snapshot);
-    node.classList.remove(AF_COLLAPSED);
-    node.removeAttribute("data-af-state");
-    placeholder.remove();
+  const chips = document.createElement("div");
+  chips.className = "af-chips";
+  chips.hidden = true;
+
+  const setCollapsed = (collapsed: boolean) => {
+    node.classList.toggle(AF_COLLAPSED, collapsed);
+    node.setAttribute("data-af-state", collapsed ? "collapsed" : "expanded");
+    bar.setAttribute("aria-expanded", String(!collapsed));
+    chips.hidden = collapsed;
+    if (collapsed) panel.hidden = true;
+  };
+
+  // Bar click: UI-only reveal in place (or re-collapse), nothing stored.
+  bar.addEventListener("click", () => {
+    const expanded = node.getAttribute("data-af-state") === "expanded";
+    if (expanded) handlers.onCollapse?.(snapshot, result);
+    else handlers.onReveal?.(snapshot);
+    setCollapsed(expanded);
   });
 
-  const keep = document.createElement("button");
-  keep.textContent = "Keep this post";
-  keep.addEventListener("click", () => {
+  const keep = mkButton("Keep this post", () => {
     handlers.onReveal?.(snapshot);
     handlers.onKeep(snapshot);
-    node.classList.remove(AF_COLLAPSED);
-    node.removeAttribute("data-af-state");
-    placeholder.remove();
+    handlers.onCorrect(feedbackFor(snapshot, result, "wrong_classification", "keep"));
+    clearOwned(node);
   });
 
-  const correct = document.createElement("button");
-  correct.textContent = "Correct filter";
+  const goodCall = mkButton("Good call", () => {
+    handlers.onCorrect(feedbackFor(snapshot, result, "confirm_hide", "hide"));
+    noted.add(node);
+    handlers.onCollapse?.(snapshot, result);
+    bar.textContent = barText();
+    setCollapsed(true);
+  });
 
   const panel = document.createElement("div");
-  panel.className = "af-correct-panel";
+  panel.className = "af-panel";
   panel.hidden = true;
 
-  const mkChoice = (kind: Feedback["kind"], label: string) => {
-    const b = document.createElement("button");
-    b.textContent = label;
-    b.addEventListener("click", () => {
-      panel.dataset.kind = kind;
-      textarea.hidden = false;
-      submit.hidden = false;
+  const ruleId = result.causeRuleIds[0];
+  const rule = ruleId ? handlers.policy?.()?.rules.find((r) => r.id === ruleId) : undefined;
+  const change = mkButton("Change the filter", () => {
+    if (!rule) return;
+    if (!panel.hidden) {
+      panel.hidden = true;
+      return;
+    }
+    panel.replaceChildren();
+    const title = document.createElement("div");
+    title.className = "af-panel-title";
+    title.textContent = rule.title;
+    const textarea = document.createElement("textarea");
+    textarea.value = rule.instruction;
+    const label = document.createElement("label");
+    const slider = document.createElement("input");
+    slider.type = "range";
+    slider.min = "0.3";
+    slider.max = "0.99";
+    slider.step = "0.01";
+    slider.value = String(rule.hideThreshold ?? 0.7);
+    const labelText = () => `Hide when confidence ≥ ${Number(slider.value).toFixed(2)}`;
+    label.textContent = labelText();
+    slider.addEventListener("input", () => (label.textContent = labelText()));
+    const actions = document.createElement("div");
+    actions.className = "af-actions";
+    const save = mkButton("Save", () => {
+      const policy = handlers.policy?.();
+      if (!policy) return;
+      const instruction = textarea.value.trim() || rule.instruction;
+      const hideThreshold = Number(slider.value);
+      const next: Policy = {
+        ...policy,
+        revision: policy.revision + 1,
+        rules: policy.rules.map((r) =>
+          r.id === rule.id ? { ...r, instruction, hideThreshold } : r,
+        ),
+      };
+      handlers.onCorrect(
+        feedbackFor(snapshot, result, "change_preference", "keep", {
+          ruleId: rule.id,
+          explanation: `instruction: ${instruction}\nthreshold: ${hideThreshold.toFixed(2)}`,
+        }),
+      );
+      handlers.onSavePolicy?.(next);
+      panel.hidden = true;
     });
-    return b;
-  };
-  const textarea = document.createElement("textarea");
-  textarea.placeholder = "Optional: what should happen instead?";
-  textarea.hidden = true;
-  const submit = document.createElement("button");
-  submit.textContent = "Save correction";
-  submit.hidden = true;
-  submit.addEventListener("click", () => {
-    const kind = (panel.dataset.kind ?? "wrong_classification") as Feedback["kind"];
-    handlers.onCorrect({
-      postId: snapshot.postId,
-      contentHash: snapshot.contentHash,
-      text: snapshot.text,
-      kind,
-      desiredAction: result.disposition === "hide" ? "keep" : "hide",
-      ruleId: result.causeRuleIds[0],
-      explanation: textarea.value || undefined,
-      policyRevision: result.policyRevision,
-    });
-    panel.hidden = true;
+    const cancel = mkButton("Cancel", () => (panel.hidden = true));
+    actions.append(save, cancel);
+    panel.append(title, textarea, label, slider, actions);
+    panel.hidden = false;
   });
+  if (!rule) change.hidden = true;
 
-  panel.append(
-    mkChoice("wrong_classification", "Wrong classification"),
-    mkChoice("change_preference", "Change what I want"),
-    textarea,
-    submit,
-  );
-  correct.addEventListener("click", () => {
-    panel.hidden = !panel.hidden;
-  });
-
-  placeholder.append(rules, note, reveal, keep, correct, panel);
-  node.classList.add(AF_COLLAPSED);
-  node.setAttribute("data-af-state", "collapsed");
+  chips.append(keep, goodCall, change);
+  placeholder.append(bar, chips, panel);
+  setCollapsed(true);
   node.prepend(placeholder);
 }
 
-export function restoreNode(node: Element): void {
-  node.classList.remove(AF_COLLAPSED);
+/**
+ * Shown post: add a small "Hide" pill in the top-right corner. Its menu lists
+ * every enabled hide rule plus "Other…"; choosing one collapses the post with
+ * `Hidden · <rule> · Noted` and stores an exact override + feedback.
+ */
+export function renderShown(
+  node: Element,
+  result: DecisionResult,
+  snapshot: PostSnapshot,
+  handlers: RenderHandlers,
+): void {
+  clearOwned(node);
+  ensureStyle();
+  node.classList.add(AF_HOST);
+
+  const pill = document.createElement("button");
+  pill.type = "button";
+  pill.setAttribute(AF_OWNED, "");
+  pill.className = "af-hide-pill";
+  pill.textContent = "Hide";
+  pill.setAttribute("aria-haspopup", "menu");
+  pill.setAttribute("aria-expanded", "false");
+
+  let menu: HTMLElement | null = null;
+  const closeMenu = () => {
+    menu?.remove();
+    menu = null;
+    pill.setAttribute("aria-expanded", "false");
+  };
+
+  const hideAs = (ruleId: string | undefined, explanation?: string) => {
+    const hidden: DecisionResult = {
+      ...result,
+      disposition: "hide",
+      causeRuleIds: ruleId ? [ruleId] : [],
+      exceptionRuleIds: [],
+      source: "override",
+    };
+    handlers.onHide?.(snapshot);
+    handlers.onCorrect(
+      feedbackFor(snapshot, result, "wrong_classification", "hide", { ruleId, explanation }),
+    );
+    noted.add(node);
+    handlers.onCollapse?.(snapshot, hidden);
+    renderCollapsed(node, hidden, snapshot, handlers);
+  };
+
+  pill.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (menu) {
+      closeMenu();
+      return;
+    }
+    menu = document.createElement("div");
+    menu.setAttribute(AF_OWNED, "");
+    menu.setAttribute("role", "menu");
+    menu.className = "af-menu";
+    menu.addEventListener("click", (ev) => ev.stopPropagation());
+    const rules = (handlers.policy?.()?.rules ?? []).filter(
+      (r) => r.enabled && r.hideThreshold !== undefined,
+    );
+    for (const r of rules) menu.append(mkButton(r.title, () => hideAs(r.id)));
+    const other = document.createElement("input");
+    other.type = "text";
+    other.placeholder = "Other…";
+    other.setAttribute("aria-label", "Other reason");
+    other.addEventListener("keydown", (ev) => {
+      if (ev.key === "Enter") hideAs(undefined, other.value.trim() || undefined);
+      if (ev.key === "Escape") closeMenu();
+    });
+    menu.append(other);
+    node.append(menu);
+    pill.setAttribute("aria-expanded", "true");
+  });
+
+  node.prepend(pill);
+}
+
+function clearOwned(node: Element): void {
+  node.classList.remove(AF_COLLAPSED, AF_HOST);
   node.removeAttribute("data-af-state");
   node.querySelectorAll(`.${AF_COLLAPSED}`).forEach((el) => el.classList.remove(AF_COLLAPSED));
   node.querySelectorAll(`[${AF_OWNED}]`).forEach((el) => el.remove());
+}
+
+export function restoreNode(node: Element): void {
+  clearOwned(node);
+  noted.delete(node);
+}
+
+/** Shared render dispatch for adapters: collapse hide/uncertain, pill on show. */
+export function renderDecision(
+  node: Element,
+  result: DecisionResult,
+  snapshot: PostSnapshot,
+  handlers: RenderHandlers,
+): void {
+  if (result.disposition === "hide" || result.disposition === "uncertain") {
+    renderCollapsed(node, result, snapshot, handlers);
+  } else if (result.disposition === "show") {
+    renderShown(node, result, snapshot, handlers);
+  } else {
+    restoreNode(node);
+  }
 }
 
 // ---- fixture adapter ------------------------------------------------------
@@ -226,11 +428,7 @@ export const fixtureAdapter: SiteAdapter = {
   render(node, result, handlers) {
     const snapshot = snapshots.get(node);
     if (!snapshot) return;
-    if (result.disposition === "hide" || result.disposition === "uncertain") {
-      renderCollapsed(node, result, snapshot, handlers);
-    } else {
-      restoreNode(node);
-    }
+    renderDecision(node, result, snapshot, handlers);
   },
 
   restore(node) {

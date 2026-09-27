@@ -1,7 +1,9 @@
 import {
   type DecisionResult,
   type Feedback,
+  type Override,
   type Policy,
+  type PostSnapshot,
 } from "../contracts";
 import { ensureStyle, fixtureAdapter } from "./adapter";
 import { xAdapter } from "./x-adapter";
@@ -12,6 +14,18 @@ const adapter = isX ? xAdapter : fixtureAdapter;
 
 function send<T>(msg: unknown): Promise<T | undefined> {
   return chrome.runtime.sendMessage(msg).then((r) => (r?.ok ? r : undefined));
+}
+
+function setOverride(snapshot: PostSnapshot, action: Override["action"]): void {
+  void send({
+    type: "SET_OVERRIDE",
+    override: {
+      postId: snapshot.postId,
+      contentHash: snapshot.contentHash,
+      action,
+      createdAt: Date.now(),
+    },
+  });
 }
 
 const controller = createController({
@@ -32,16 +46,10 @@ const controller = createController({
     send<{ policy: Policy }>({ type: "GET_POLICY" }).then((r) => r?.policy),
   getEnabled: () =>
     send<{ enabled: boolean }>({ type: "GET_ENABLED" }).then((r) => r?.enabled),
-  onKeep: (snapshot) => {
-    void send({
-      type: "SET_OVERRIDE",
-      override: {
-        postId: snapshot.postId,
-        contentHash: snapshot.contentHash,
-        action: "keep",
-        createdAt: Date.now(),
-      },
-    });
+  onKeep: (snapshot) => setOverride(snapshot, "keep"),
+  onHide: (snapshot) => setOverride(snapshot, "hide"),
+  onSavePolicy: (policy) => {
+    void send({ type: "SAVE_POLICY", policy });
   },
   onCorrect: (fb) => {
     const feedback: Feedback = {

@@ -53,8 +53,12 @@ MockClassifier + evaluator produce the dispositions in `fixtures/expected.json`
    select `extension/dist/`.
 3. Browse to `https://x.com` logged in.
 
-What to expect: matching posts collapse into an in-article placeholder naming
-the rule that fired, with **Reveal** / **Keep this post** / **Correct filter**.
+What to expect: matching posts collapse into a one-line bar (`Hidden · Rage
+bait`). Clicking the bar reveals the post in place with three chips: **Keep
+this post** (exact override) / **Good call** (confirms, re-collapses as
+`· Noted`) / **Change the filter** (edit the rule's instruction + threshold
+inline). Shown posts get a small **Hide** pill top-right whose menu lists
+your hide rules + "Other…".
 The popup toggle restores everything when off; editing rules re-evaluates all
 mounted posts.
 
@@ -83,7 +87,7 @@ script.
 1. Home timeline: at least one post collapses and the placeholder names a rule.
 2. Scroll 50+ posts: no unrelated element is hidden; no `[af]` errors in
    console.
-3. Reveal sticks when scrolling away and back.
+3. Bar-click reveal sticks when scrolling away and back.
 4. Keep this post → the post survives a reload.
 5. Popup toggle off → all placeholders gone; on → posts re-collapse.
 6. Edit a rule → mounted posts re-evaluate.
