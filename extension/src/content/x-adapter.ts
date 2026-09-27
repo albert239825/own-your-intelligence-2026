@@ -67,7 +67,8 @@ export function discover(root: ParentNode | Element): Element[] {
  * <article> (lite quote) or a div[role="link"] (app quote).
  */
 export function isInsideQuote(el: Element, node: Element): boolean {
-  const c = el.closest('article, [role="link"]');
+  // Start at the parent so an <a role="link"> status anchor doesn't match itself.
+  const c = el.parentElement?.closest('article, div[role="link"]') ?? null;
   return c !== null && c !== node;
 }
 
