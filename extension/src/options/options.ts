@@ -7,7 +7,6 @@ import {
   type Rule,
 } from "../contracts";
 import {
-  applyAggressiveness,
   buildExport,
   DEFAULT_SETTINGS,
   describePrompt,
@@ -15,6 +14,7 @@ import {
   joinCustomInstruction,
   nextPolicy,
   parseImport,
+  presetThreshold,
   previewExamples,
   reviewRows,
   RULE_BLURBS,
@@ -109,7 +109,9 @@ function renderAggControl(seg: HTMLElement, hintEl: HTMLElement, onChange: () =>
       const b = el("button", {}, name[0]!.toUpperCase() + name.slice(1));
       if (detected === name) b.classList.add("active");
       b.addEventListener("click", () => {
-        draftRules = applyAggressiveness({ ...currentPolicy, rules: draftRules }, name).rules;
+        for (const r of draftRules) {
+          if (r.hideThreshold !== undefined) r.hideThreshold = presetThreshold(r.id, name);
+        }
         hintEl.textContent = AGGR_HINTS[name];
         syncSliders();
         render();
