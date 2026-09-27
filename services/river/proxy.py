@@ -95,7 +95,7 @@ def make_app(chat: ChatFn, model_version: str, token: str | None, timeout_s: flo
         started = time.perf_counter()
         try:
             responses = await asyncio.wait_for(asyncio.gather(*(chat(m) for m in messages)), timeout_s)
-        except TimeoutError:
+        except (TimeoutError, asyncio.TimeoutError):
             log.warning("upstream timeout after %ss (%d rules)", timeout_s, len(items))
             raise HTTPException(502, f"river upstream timeout after {timeout_s}s") from None
         except Exception as e:
