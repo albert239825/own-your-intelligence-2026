@@ -84,6 +84,20 @@ export const FeedbackSchema = z.object({
 });
 export type Feedback = z.infer<typeof FeedbackSchema>;
 
+/** Result of TEST_CLASSIFY: raw model output + evaluator trace, nothing cached or recorded. */
+export interface TestClassifyResult {
+  disposition: Disposition;
+  causeRuleIds: string[];
+  exceptionRuleIds: string[];
+  probabilities: Record<string, number>;
+  trace: { ruleId: string; probability: number | undefined; threshold: number; fired: boolean; protectedBy?: { ruleId: string; probability: number; uncertain: boolean } }[];
+  modelVersion: string;
+  classifier: "mock" | "kev";
+  policyRevision: number;
+  elapsedMs: number;
+  error?: string;
+}
+
 export const DecisionRequestSchema = z.object({
   requestId: z.string(),
   post: PostSnapshotSchema,
@@ -101,6 +115,7 @@ export const MessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("CLEAR_HISTORY") }),
   z.object({ type: z.literal("SET_ENABLED"), enabled: z.boolean() }),
   z.object({ type: z.literal("GET_ENABLED") }),
+  z.object({ type: z.literal("TEST_CLASSIFY"), text: z.string(), quoteText: z.string().optional() }),
 ]);
 export type Message = z.infer<typeof MessageSchema>;
 

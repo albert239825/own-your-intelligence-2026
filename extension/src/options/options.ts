@@ -5,6 +5,7 @@ import {
   type Override,
   type Policy,
   type Rule,
+  type TestClassifyResult,
 } from "../contracts";
 import {
   buildExport,
@@ -197,7 +198,7 @@ function buildModelSection(container: HTMLElement, initial: Settings): ModelInpu
 
 // ---- routing ----------------------------------------------------------------
 
-const views = ["onboarding", "settings", "review"] as const;
+const views = ["onboarding", "settings", "review", "test"] as const;
 type View = (typeof views)[number];
 
 function currentView(): View {
@@ -213,9 +214,11 @@ async function route(): Promise<void> {
   }
   $("nav-settings").classList.toggle("active", v === "settings");
   $("nav-review").classList.toggle("active", v === "review");
+  $("nav-test").classList.toggle("active", v === "test");
   if (v === "onboarding") renderOnboarding();
   else if (v === "settings") renderSettings();
-  else await renderReview();
+  else if (v === "review") await renderReview();
+  else await refreshPolicy();
 }
 
 window.addEventListener("hashchange", () => void route());
@@ -601,6 +604,85 @@ async function renderReview(): Promise<void> {
   }
 }
 
+// ---- test a post ---------------------------------------------------------
+
+async function refreshPolicy(): Promise<void> {
+  const res = await send<{ policy: Policy }>({ type: "GET_POLICY" });
+  if (res?.policy) currentPolicy = res.policy;
+}
+
+async function runTest(): Promise<void> {
+  const text = ($("ts-text") as HTMLTextAreaElement).value;
+  const quoteText = ($("ts-quote") as HTMLTextAreaElement).value.trim();
+  const status = $("ts-status");
+  const btn = $("ts-run") as HTMLButtonElement;
+  if (text.trim().length === 0) {
+    status.textContent = "Paste some text first";
+    status.className = "status-err";
+    return;
+  }
+  btn.disabled = true;
+  status.textContent = "Classifying…";
+  status.className = "muted";
+  await refreshPolicy();
+  const res = await send<{ result: TestClassifyResult }>({
+    type: "TEST_CLASSIFY",
+    text,
+    quoteText: quoteText || undefined,
+  });
+  btn.disabled = false;
+  if (!res) {
+    status.textContent = "Request failed";
+    status.className = "status-err";
+    return;
+  }
+  status.textContent = "";
+  renderTestResult(res.result);
+}
+
+function renderTestResult(r: TestClassifyResult): void {
+  const host = $("ts-result");
+  host.replaceChildren();
+  const label = { hide: "Hidden", show: "Kept", uncertain: "Uncertain", unsupported: "Unsupported" }[r.disposition];
+  host.append(el("div", {}, el("span", { class: `badge ${r.disposition}` }, label)));
+  if (r.error) host.append(el("p", { class: "status-err" }, `Classifier error (fell back to show): ${r.error}`));
+  let reason = "no rule fired";
+  if (r.disposition === "hide") reason = `hidden by ${r.causeRuleIds.map(ruleTitle).join(", ")}`;
+  else if (r.exceptionRuleIds.length > 0) reason = `kept: ${r.exceptionRuleIds.map(ruleTitle).join(", ")} protected it`;
+  else if (r.disposition === "uncertain") reason = "borderline — kept but flagged";
+  host.append(el("p", {}, reason));
+
+  const table = el("table", { class: "rules" });
+  const tb = el("tbody");
+  tb.append(el("tr", {}, el("th", {}, "Rule"), el("th", {}, "P(yes)"), el("th", {}, "Threshold"), el("th", {}, "Outcome")));
+  for (const t of r.trace) {
+    let outcome = "below threshold";
+    if (t.fired) outcome = "fired";
+    else if (t.protectedBy)
+      outcome = `${t.protectedBy.uncertain ? "weakly " : ""}protected by ${ruleTitle(t.protectedBy.ruleId)} (${t.protectedBy.probability.toFixed(2)})`;
+    tb.append(
+      el("tr", { class: t.fired ? "fired" : "" },
+        el("td", {}, ruleTitle(t.ruleId)),
+        el("td", { class: "mono" }, t.probability === undefined ? "—" : t.probability.toFixed(2)),
+        el("td", { class: "mono" }, t.threshold.toFixed(2)),
+        el("td", {}, outcome)),
+    );
+  }
+  table.append(tb);
+  host.append(table);
+
+  const chips = el("div", { style: "margin-top:8px" });
+  for (const [id, p] of Object.entries(r.probabilities)) {
+    chips.append(el("span", { class: "chip mono" }, `${id} ${p.toFixed(2)}`));
+  }
+  host.append(el("h3", { style: "margin-top:10px" }, "Raw probabilities"), chips);
+  host.append(
+    el("div", { class: "muted" },
+      `classifier ${r.classifier} · model ${r.modelVersion} · revision ${r.policyRevision} · ${r.elapsedMs} ms`),
+  );
+  host.append(el("details", {}, el("summary", {}, "JSON"), el("pre", { class: "mono" }, JSON.stringify(r, null, 2))));
+}
+
 // ---- enabled pill ---------------------------------------------------------
 
 async function refreshEnabled(): Promise<void> {
@@ -650,6 +732,12 @@ $("st-import-file").addEventListener("change", async (e) => {
   if (f) await importJson(f);
   (e.target as HTMLInputElement).value = "";
 });
+$("ts-run").addEventListener("click", () => void runTest());
+for (const id of ["ts-text", "ts-quote"]) {
+  $(id).addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === "Enter") void runTest();
+  });
+}
 $("rv-refresh").addEventListener("click", () => void renderReview());
 $("rv-clear").addEventListener("click", async () => {
   await send({ type: "CLEAR_HISTORY" });

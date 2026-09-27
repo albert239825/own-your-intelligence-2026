@@ -106,6 +106,9 @@ label { display: block; margin-bottom: 6px; }
 
 table.rules { border-collapse: collapse; width: 100%; }
 table.rules td { border-top: 1px solid var(--border); padding: 8px; vertical-align: top; }
+table.rules th { text-align: left; padding: 4px 8px; font-size: 12px; color: var(--muted); }
+table.rules tr.fired td { background: var(--hide-bg); color: var(--hide-fg); }
+#ts-result pre { white-space: pre-wrap; word-break: break-all; max-height: 300px; overflow: auto; }
 
 #prompt-panel .q { margin-bottom: 8px; font-family: ui-monospace, monospace; font-size: 12px; white-space: pre-wrap; }
 .status-ok { color: var(--show-fg); }

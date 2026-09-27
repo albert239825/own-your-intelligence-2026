@@ -30,6 +30,10 @@ document.getElementById("open-review")!.addEventListener("click", () => {
   void chrome.tabs.create({ url: chrome.runtime.getURL("options.html#review") });
 });
 
+document.getElementById("open-test")!.addEventListener("click", () => {
+  void chrome.tabs.create({ url: chrome.runtime.getURL("options.html#test") });
+});
+
 void (async () => {
   const [enabledRes, histRes, store] = await Promise.all([
     send<{ enabled: boolean }>({ type: "GET_ENABLED" }),
