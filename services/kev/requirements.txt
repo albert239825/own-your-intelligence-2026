@@ -1,0 +1,8 @@
+# Deploy-side (your laptop): the Modal CLI plus what adapter.py imports locally for tests.
+# Inside the container, deploy.py installs kev[serve] from the pinned git commit (KEV_REF).
+modal==1.5.5
+fastapi==0.141.1
+pydantic==2.13.5
+httpx==0.28.1
+pytest==9.1.1
+ruff==0.16.8
