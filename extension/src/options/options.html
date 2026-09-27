@@ -1,0 +1,49 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Attention Filter — settings</title>
+  <style>
+    body { font: 14px/1.5 system-ui, sans-serif; max-width: 720px; margin: 24px auto; padding: 0 16px; }
+    .rule { border: 1px solid #ccc; border-radius: 8px; padding: 12px; margin-bottom: 12px; }
+    textarea { width: 100%; min-height: 64px; font: inherit; }
+    input[type=text], input[type=password] { width: 100%; font: inherit; padding: 4px; }
+    button { padding: 6px 14px; margin-right: 8px; cursor: pointer; }
+    h2 { margin-top: 32px; }
+    .status { color: green; }
+    table { border-collapse: collapse; width: 100%; }
+    td, th { border-bottom: 1px solid #eee; padding: 4px; text-align: left; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <h1>Attention Filter</h1>
+  <p>Set the rules your feed is filtered by. Instructions are sent to the model verbatim.</p>
+
+  <h2>Rules</h2>
+  <div id="rules"></div>
+
+  <h2>Custom filter</h2>
+  <p>Anything else you want hidden (or kept)? One free-text instruction becomes one extra rule.</p>
+  <textarea id="custom" placeholder="e.g. Hide posts about crypto giveaways"></textarea>
+
+  <h2>Endpoint</h2>
+  <label>Classifier
+    <select id="classifier">
+      <option value="mock">mock (local keywords)</option>
+      <option value="kev">kev (remote endpoint)</option>
+    </select>
+  </label>
+  <label>Endpoint URL <input type="text" id="endpoint" placeholder="https://...modal.run" /></label>
+  <label>Token <input type="password" id="token" /></label>
+
+  <p><button id="save">Save</button> <span id="status" class="status"></span></p>
+
+  <h2>Review history</h2>
+  <p><button id="refresh-history">Refresh</button>
+     <button id="clear-history">Clear history</button>
+     <button id="export">Export JSON (policy + feedback, no token)</button></p>
+  <table id="history"><thead><tr><th>Post</th><th>Disposition</th><th>Rules</th><th></th></tr></thead><tbody></tbody></table>
+
+  <script src="options/options.js"></script>
+</body>
+</html>

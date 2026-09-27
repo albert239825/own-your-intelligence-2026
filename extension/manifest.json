@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "Attention Filter",
+  "version": "0.1.0",
+  "description": "Filter your X feed with rules you write. Local-first, your endpoint, your data.",
+  "permissions": ["storage"],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://x.com/*",
+        "https://twitter.com/*",
+        "file://*/fixtures/feed.html",
+        "http://localhost/*",
+        "http://127.0.0.1/*"
+      ],
+      "js": ["content/index.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "options_page": "options.html",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Attention Filter"
+  }
+}

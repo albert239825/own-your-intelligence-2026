@@ -1,0 +1,158 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Fixture feed</title>
+  <style>
+    body { font: 15px/1.5 system-ui, sans-serif; max-width: 600px; margin: 0 auto; background: #000; color: #e7e9ea; }
+    article { border-bottom: 1px solid #2f3336; padding: 16px; }
+    .author { font-weight: 600; margin-bottom: 4px; color: #71767b; }
+    .quote-text { border: 1px solid #2f3336; border-radius: 12px; padding: 12px; margin-top: 8px; color: #aab; }
+    a { color: #1d9bf0; }
+  </style>
+</head>
+<body>
+  <!-- Bait/critique pairs on the same topics. MockClassifier must hide bait,
+       keep critiques. Expected dispositions in expected.json. -->
+
+  <article data-post-id="p01">
+    <div class="author">@aialpha</div>
+    <p class="post-text">Anyone still doubting LLM agents is an idiot. These clowns have been wrong every single year and they're about to be destroyed again. Pathetic.</p>
+    <a class="post-link" href="https://x.com/aialpha/status/1001">link</a>
+  </article>
+
+  <article data-post-id="p02">
+    <div class="author">@measuredml</div>
+    <p class="post-text">I'm skeptical of the agent claims, however, because the published numbers don't separate tool-assisted browsing from closed-book recall. The benchmark harness matters here: with a fixed evaluation method the gap narrows considerably, and the evidence for autonomous long-horizon work remains thin. There are real limitations worth naming before we extrapolate.</p>
+    <a class="post-link" href="https://x.com/measuredml/status/1002">link</a>
+  </article>
+
+  <article data-post-id="p03">
+    <div class="author">@hypebot</div>
+    <p class="post-text">This new reasoning model is absolutely INSANE. A total game-changer, easily 100x better than anything else. Mind-blowing. If you disagree you're a moron.</p>
+    <a class="post-link" href="https://x.com/hypebot/status/1003">link</a>
+  </article>
+
+  <article data-post-id="p04">
+    <div class="author">@skepticsam</div>
+    <p class="post-text">The demo looked strong, however I checked the eval details because the claims were large. The reported score uses a private benchmark with no reproducible harness, and the method section notes the baselines were run at a lower sampling budget. That's a real limitation: the measured advantage could be mostly decoding config rather than capability. Evidence before excitement.</p>
+    <a class="post-link" href="https://x.com/skepticsam/status/1004">link</a>
+  </article>
+
+  <article data-post-id="p05">
+    <div class="author">@takesfordays</div>
+    <p class="post-text">Remote work discourse is a disgrace. Every clown defending offices is a pathetic moron who never built anything. This take destroys itself.</p>
+    <a class="post-link" href="https://x.com/takesfordays/status/1005">link</a>
+  </article>
+
+  <article data-post-id="p06">
+    <div class="author">@workresearch</div>
+    <p class="post-text">The office-vs-remote evidence is more mixed than either side admits. Because most studies measure self-reported output rather than shipped work, the method introduces selection effects. However, the best quasi-experimental benchmark I found shows a small productivity cost concentrated in onboarding, which is a narrower limitation than the discourse suggests.</p>
+    <a class="post-link" href="https://x.com/workresearch/status/1006">link</a>
+  </article>
+
+  <article data-post-id="p07">
+    <div class="author">@cloutlord</div>
+    <p class="post-text">Nuclear energy opponents are absolute clowns. What a disgrace — these pathetic idiots want us all freezing in the dark.</p>
+    <a class="post-link" href="https://x.com/cloutlord/status/1007">link</a>
+  </article>
+
+  <article data-post-id="p08">
+    <div class="author">@energynerd</div>
+    <p class="post-text">I'm pro-nuclear, however the cost argument against it deserves a serious answer because the recent builds are genuinely expensive. The evidence from France's reactor program shows the method of serial construction matters more than the technology itself — a real limitation of one-off megaprojects. Measured against that benchmark, the case is strong but not free.</p>
+    <a class="post-link" href="https://x.com/energynerd/status/1008">link</a>
+  </article>
+
+  <!-- Useful announcements (show) -->
+  <article data-post-id="p09">
+    <div class="author">@ossproject</div>
+    <p class="post-text">We shipped v2.4 today: faster cold starts, a new plugin API, and migration docs. Changelog in the link.</p>
+    <a class="post-link" href="https://x.com/ossproject/status/1009">link</a>
+  </article>
+  <article data-post-id="p10">
+    <div class="author">@conf_org</div>
+    <p class="post-text">Call for papers open until March 15. Three tracks: systems, evaluation, safety. Travel grants available.</p>
+    <a class="post-link" href="https://x.com/conf_org/status/1010">link</a>
+  </article>
+  <article data-post-id="p11">
+    <div class="author">@cityhall</div>
+    <p class="post-text">Main St will be closed Saturday 8am–2pm for water main repair. Detour via 5th Ave.</p>
+    <a class="post-link" href="https://x.com/cityhall/status/1011">link</a>
+  </article>
+  <article data-post-id="p12">
+    <div class="author">@library_dev</div>
+    <p class="post-text">Maintenance window tonight 11pm–1am PT; the API will return 503s briefly. Status page has details.</p>
+    <a class="post-link" href="https://x.com/library_dev/status/1012">link</a>
+  </article>
+
+  <!-- Engagement farming (hide) -->
+  <article data-post-id="p13">
+    <div class="author">@farm1</div>
+    <p class="post-text">Tabs vs spaces. Agree?</p>
+    <a class="post-link" href="https://x.com/farm1/status/1013">link</a>
+  </article>
+  <article data-post-id="p14">
+    <div class="author">@farm2</div>
+    <p class="post-text">RT if you remember when the internet was fun.</p>
+    <a class="post-link" href="https://x.com/farm2/status/1014">link</a>
+  </article>
+  <article data-post-id="p15">
+    <div class="author">@farm3</div>
+    <p class="post-text">Follow me for daily motivation. Like if you're grateful today.</p>
+    <a class="post-link" href="https://x.com/farm3/status/1015">link</a>
+  </article>
+
+  <!-- Controls (show) -->
+  <article data-post-id="p16">
+    <div class="author">@normal1</div>
+    <p class="post-text">Made sourdough again. Third attempt, finally decent crumb.</p>
+    <a class="post-link" href="https://x.com/normal1/status/1016">link</a>
+  </article>
+  <article data-post-id="p17">
+    <div class="author">@normal2</div>
+    <p class="post-text">Reading group tonight: chapter 4 of the distributed systems book.</p>
+    <a class="post-link" href="https://x.com/normal2/status/1017">link</a>
+  </article>
+  <article data-post-id="p18">
+    <div class="author">@normal3</div>
+    <p class="post-text">Nice sunset on the ride home. No big opinions today.</p>
+    <a class="post-link" href="https://x.com/normal3/status/1018">link</a>
+  </article>
+
+  <!-- Quote posts -->
+  <article data-post-id="p19">
+    <div class="author">@quoter1</div>
+    <p class="post-text">This is exactly the clown behavior I was talking about. Pathetic.</p>
+    <div class="quote-text">We shipped v2.4 today: faster cold starts, a new plugin API.</div>
+    <a class="post-link" href="https://x.com/quoter1/status/1019">link</a>
+  </article>
+  <article data-post-id="p20">
+    <div class="author">@quoter2</div>
+    <p class="post-text">Good writeup, worth reading.</p>
+    <div class="quote-text">Call for papers open until March 15. Three tracks.</div>
+    <a class="post-link" href="https://x.com/quoter2/status/1020">link</a>
+  </article>
+
+  <!-- Extra bait + a critique + control to reach ~24 -->
+  <article data-post-id="p21">
+    <div class="author">@ragefuel</div>
+    <p class="post-text">Framework X users are morons and their docs are a disgrace. This idiot stack needs to be destroyed.</p>
+    <a class="post-link" href="https://x.com/ragefuel/status/1021">link</a>
+  </article>
+  <article data-post-id="p22">
+    <div class="author">@frameworkdev</div>
+    <p class="post-text">The criticism of Framework X's docs has merit, however it's worth being precise about which parts fail because the onboarding guide and the API reference have different problems. In my own benchmark of new-hire ramp time the method showed the tutorial is the bottleneck, which is a fixable limitation rather than a structural one.</p>
+    <a class="post-link" href="https://x.com/frameworkdev/status/1022">link</a>
+  </article>
+  <article data-post-id="p23">
+    <div class="author">@hypetrain</div>
+    <p class="post-text">Revolutionary new productivity app dropped and it's a total game-changer. 100x your output overnight. Insane.</p>
+    <a class="post-link" href="https://x.com/hypetrain/status/1023">link</a>
+  </article>
+  <article data-post-id="p24">
+    <div class="author">@quietposter</div>
+    <p class="post-text">Finished the marathon in 4:12. Tired legs, happy heart.</p>
+    <a class="post-link" href="https://x.com/quietposter/status/1024">link</a>
+  </article>
+</body>
+</html>

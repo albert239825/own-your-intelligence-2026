@@ -1,0 +1,22 @@
+{
+  "name": "attention-filter-extension",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Chrome MV3 extension: filter your X feed with rules you write. See docs/ARCHITECTURE.md.",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "3.23.8"
+  },
+  "devDependencies": {
+    "@types/chrome": "0.0.270",
+    "@types/node": "^20.14.0",
+    "esbuild": "0.21.5",
+    "typescript": "5.5.4",
+    "vitest": "1.6.0"
+  }
+}
