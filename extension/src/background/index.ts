@@ -7,6 +7,7 @@ import {
   PolicySchema,
   type DecisionResult,
   type Feedback,
+  type HistoryEntry,
   type Message,
   type Override,
   type Policy,
@@ -59,13 +60,18 @@ async function getOverrides(): Promise<Record<string, Override>> {
 async function getSettings(): Promise<Settings> {
   return { ...DEFAULT_SETTINGS, ...(await storeGet<Partial<Settings>>("settings")) };
 }
-async function getHistory(): Promise<DecisionResult[]> {
-  return (await storeGet<DecisionResult[]>("history")) ?? [];
+async function getHistory(): Promise<HistoryEntry[]> {
+  return (await storeGet<HistoryEntry[]>("history")) ?? [];
 }
-async function pushHistory(result: DecisionResult): Promise<void> {
+async function pushHistory(result: DecisionResult, post: PostSnapshot): Promise<void> {
+  const entry: HistoryEntry = {
+    ...result,
+    post: { text: post.text, quoteText: post.quoteText },
+    at: Date.now(),
+  };
   await withStore(async () => {
     const history = await getHistory();
-    await storeSet({ history: appendCapped(history, result, HISTORY_LIMIT) });
+    await storeSet({ history: appendCapped(history, entry, HISTORY_LIMIT) });
   });
 }
 async function appendFeedback(fb: Feedback): Promise<void> {
@@ -165,7 +171,7 @@ async function classifyPost(request: {
   };
 
   if (!overrideApplies) cache.set(key, result);
-  await pushHistory(result);
+  await pushHistory(result, request.post);
   return result;
 }
 

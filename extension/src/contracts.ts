@@ -63,6 +63,13 @@ export const DecisionResultSchema = z.object({
 });
 export type DecisionResult = z.infer<typeof DecisionResultSchema>;
 
+/** DecisionResult + the post text, for the review UI and training-data export. */
+export const HistoryEntrySchema = DecisionResultSchema.extend({
+  post: z.object({ text: z.string(), quoteText: z.string().optional() }),
+  at: z.number(),
+});
+export type HistoryEntry = z.infer<typeof HistoryEntrySchema>;
+
 export const FeedbackSchema = z.object({
   feedbackId: z.string(),
   postId: z.string(),
