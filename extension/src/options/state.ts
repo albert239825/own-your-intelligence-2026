@@ -40,7 +40,7 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 /**
  * Presets are relative to each rule's default threshold (DEFAULT_POLICY,
  * fallback 0.85 for ids unknown there): cautious = base + 0.10 (cap 0.99),
- * balanced = base, aggressive = base - 0.15 (floor 0.5).
+ * balanced = base, aggressive = base - 0.15 (floor 0.3).
  */
 export function presetThreshold(ruleId: string, a: Aggressiveness): number {
   const base =
@@ -51,7 +51,7 @@ export function presetThreshold(ruleId: string, a: Aggressiveness): number {
     case "balanced":
       return base;
     case "aggressive":
-      return Math.max(0.5, round2(base - 0.15));
+      return Math.max(0.3, round2(base - 0.15));
   }
 }
 

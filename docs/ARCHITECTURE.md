@@ -104,9 +104,11 @@ Evaluator precedence: disabled/unsupported/stale → show · exact override → 
 enabled hide rule ≥ threshold → check only its attached exceptions (≥0.70 keeps, 0.30–0.70 keeps as
 uncertain, <0.30 hide) · hide if any rule remains actionable.
 
-Feedback: **Reveal** (UI only) · **Keep this post** (exact override) · **Correct** → choose
-"wrong classification" (saves rule-labeled example) or "change what I want" (edits rule text →
-new policy revision → reevaluate cached posts).
+Feedback (hidden post; bar click reveals in place, UI only): **Keep this post** (exact override
+keep + `wrong_classification`/keep) · **Good call** (re-collapses as `· Noted`, `confirm_hide`) ·
+**Change the filter** (inline instruction + threshold edit → SAVE_POLICY → new revision →
+reevaluate mounted posts, plus `change_preference`). Shown post: **Hide** pill → pick a rule or
+"Other…" → exact override hide + `wrong_classification`/hide; thresholds untouched.
 
 Cache key: `contentHash + policyRevision + modelVersion + compilerVersion`.
 

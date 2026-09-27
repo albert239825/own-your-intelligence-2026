@@ -503,6 +503,12 @@ async function importJson(file: File): Promise<void> {
 
 // ---- review ---------------------------------------------------------
 
+const FEEDBACK_KIND_LABEL: Record<Feedback["kind"], string> = {
+  wrong_classification: "Wrong classification",
+  change_preference: "Preference changed",
+  confirm_hide: "Confirmed",
+};
+
 async function renderReview(): Promise<void> {
   const [histRes, polRes, store] = await Promise.all([
     send<{ history: DecisionResult[] }>({ type: "GET_HISTORY" }),
@@ -543,6 +549,7 @@ async function renderReview(): Promise<void> {
         `source ${r.source} · model ${r.modelVersion} · revision ${r.policyRevision}`),
     );
     const fb = feedbackByPost.get(r.postId);
+    if (fb) card.append(el("span", { class: "badge uncertain" }, FEEDBACK_KIND_LABEL[fb.kind]));
     if (fb && fb.text) card.append(el("p", {}, fb.text));
     else card.append(el("p", { class: "muted" }, "Post text is not stored in history; open the post on X by id."));
 

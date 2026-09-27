@@ -75,7 +75,7 @@ export const FeedbackSchema = z.object({
   postId: z.string(),
   contentHash: z.string(),
   text: z.string(),
-  kind: z.enum(["wrong_classification", "change_preference"]),
+  kind: z.enum(["wrong_classification", "change_preference", "confirm_hide"]),
   desiredAction: z.enum(["keep", "hide"]),
   ruleId: z.string().optional(),
   explanation: z.string().optional(),
