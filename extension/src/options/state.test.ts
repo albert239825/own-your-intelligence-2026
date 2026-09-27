@@ -55,13 +55,14 @@ describe("aggressiveness", () => {
     const crit = p.rules.find((r) => r.id === "substantive_critique")!;
     expect(crit.hideThreshold).toBeUndefined();
     const t = (id: string) => p.rules.find((r) => r.id === id)!.hideThreshold;
-    expect(t("rage_bait")).toBeCloseTo(0.95);
-    expect(t("hype")).toBeCloseTo(0.95);
-    expect(t("engagement_farming")).toBeCloseTo(0.99); // 0.90 + 0.10 capped
+    expect(t("rage_bait")).toBeCloseTo(0.8);
+    expect(t("hype")).toBeCloseTo(0.7);
+    expect(t("engagement_farming")).toBeCloseTo(0.6);
     const aggr = applyAggressiveness(DEFAULT_POLICY, "aggressive");
     const ta = (id: string) => aggr.rules.find((r) => r.id === id)!.hideThreshold;
-    expect(ta("rage_bait")).toBeCloseTo(0.7);
-    expect(ta("engagement_farming")).toBeCloseTo(0.75);
+    expect(ta("rage_bait")).toBeCloseTo(0.55);
+    expect(ta("hype")).toBeCloseTo(0.45);
+    expect(ta("engagement_farming")).toBeCloseTo(0.35);
     expect(detectAggressiveness(aggr)).toBe("aggressive");
   });
 
