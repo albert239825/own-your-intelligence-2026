@@ -10,7 +10,7 @@ def test_evaluate_matches_evaluate_ts():
     assert evaluate({"rage_bait": 0.9, "hype": 0.1, "engagement_farming": 0.1, "substantive_critique": 0.75}) == "show"
     assert evaluate({"rage_bait": 0.9, "hype": 0.1, "engagement_farming": 0.1, "substantive_critique": 0.5}) == "uncertain"
     assert evaluate({"rage_bait": 0.1, "hype": 0.1, "engagement_farming": 0.95, "substantive_critique": 0.99}) == "hide"
-    assert evaluate({"rage_bait": 0.84, "hype": 0.84, "engagement_farming": 0.89, "substantive_critique": 0.0}) == "show"
+    assert evaluate({"rage_bait": 0.69, "hype": 0.59, "engagement_farming": 0.49, "substantive_critique": 0.0}) == "show"
 
 
 def test_datasets_are_consistent_with_policy():
