@@ -12,6 +12,9 @@ export interface RenderHandlers {
   onKeep: (snapshot: PostSnapshot) => void;
   /** "Correct filter" confirmed -> SAVE_FEEDBACK. */
   onCorrect: (feedback: Omit<Feedback, "feedbackId" | "createdAt">) => void;
+  /** Post was manually made visible (Reveal, or Keep which is a permanent
+   *  override): controller remembers so a re-inserted copy stays visible. */
+  onReveal?: (snapshot: PostSnapshot) => void;
 }
 
 export interface SiteAdapter {
@@ -102,6 +105,7 @@ export function renderCollapsed(
   reveal.textContent = "Reveal";
   // UI-only: unhides this render, nothing is learned or stored.
   reveal.addEventListener("click", () => {
+    handlers.onReveal?.(snapshot);
     node.classList.remove(AF_COLLAPSED);
     node.removeAttribute("data-af-state");
     placeholder.remove();
@@ -110,6 +114,7 @@ export function renderCollapsed(
   const keep = document.createElement("button");
   keep.textContent = "Keep this post";
   keep.addEventListener("click", () => {
+    handlers.onReveal?.(snapshot);
     handlers.onKeep(snapshot);
     node.classList.remove(AF_COLLAPSED);
     node.removeAttribute("data-af-state");

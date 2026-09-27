@@ -203,6 +203,73 @@ describe("controller", () => {
     controller.stop();
   });
 
+  it("virtualizer scroll-back: re-inserted copy re-renders without re-classify; Reveal/Keep stick", async () => {
+    const { fc, controller, onKeep } = setup();
+    const make = () => makeAppTweet({ id: "900", text: "virtualized" });
+    const t1 = make();
+    await startWith(controller, [t1]);
+    fc.resolve("900", "hide");
+    await controller.idle();
+    expect(collapsed(t1)).toBe(true);
+    const classifyCount = fc.callsFor("900").length;
+
+    // Virtualizer removes the article and inserts a fresh identical node.
+    t1.remove();
+    const t2 = make();
+    document.body.appendChild(t2);
+    await controller.idle();
+    expect(collapsed(t2)).toBe(true);
+    expect(fc.callsFor("900").length).toBe(classifyCount); // no re-classify
+
+    // Reveal on the fresh copy → key recorded; next re-insert stays visible.
+    const ph = t2.querySelector("[data-af-owned]")!;
+    [...ph.querySelectorAll("button")].find((b) => b.textContent === "Reveal")!.click();
+    t2.remove();
+    const t3 = make();
+    document.body.appendChild(t3);
+    await controller.idle();
+    expect(collapsed(t3)).toBe(false);
+    expect(t3.querySelector("[data-af-owned]")).toBeNull();
+
+    // Keep variant on a different post: same "stays visible" behaviour.
+    const makeK = () => makeAppTweet({ id: "901", text: "kept" });
+    const k1 = makeK();
+    document.body.appendChild(k1);
+    await controller.idle();
+    fc.resolve("901", "hide");
+    await controller.idle();
+    const kph = k1.querySelector("[data-af-owned]")!;
+    [...kph.querySelectorAll("button")].find((b) => b.textContent === "Keep this post")!.click();
+    expect(onKeep).toHaveBeenCalledTimes(1);
+    k1.remove();
+    const k2 = makeK();
+    document.body.appendChild(k2);
+    await controller.idle();
+    expect(collapsed(k2)).toBe(false);
+    expect(k2.querySelector("[data-af-owned]")).toBeNull();
+    controller.stop();
+  });
+
+  it("skeleton article transitions to a post once content arrives", async () => {
+    const { fc, controller } = setup();
+    const skeleton = makeAppTweet({ id: "unused", text: "unused", bare: true });
+    document.body.appendChild(skeleton);
+    await controller.start();
+    await controller.idle();
+    expect(fc.calls.length).toBe(0); // no postId: nothing classified
+
+    // X fills the skeleton in place: status link + tweetText appear.
+    skeleton.innerHTML = `
+      <div><a href="/user/status/950"><time datetime="2026-09-27T10:00:00.000Z">Sep 27</time></a></div>
+      <div data-testid="tweetText" dir="auto"><span>late content</span></div>`;
+    await controller.idle();
+    expect(fc.callsFor("950").length).toBe(1);
+    fc.resolve("950", "hide");
+    await controller.idle();
+    expect(collapsed(skeleton)).toBe(true);
+    controller.stop();
+  });
+
   it("observer starts even when the page boots disabled", async () => {
     const { fc, controller } = setup({ enabled: false });
     const t = makeAppTweet({ id: "800", text: "late enable" });

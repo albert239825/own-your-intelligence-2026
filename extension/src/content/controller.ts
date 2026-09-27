@@ -49,6 +49,11 @@ export function createController(deps: ControllerDeps): Controller {
 
   let known = new WeakSet<Element>();
   let nodeInfo = new WeakMap<Element, { key: string; fingerprint: string }>();
+  // Rendered results + user-revealed posts, by schedule key: lets a fresh
+  // node re-render instantly (or stay revealed) when X's virtualizer swaps
+  // article elements on scroll-back.
+  let results = new Map<string, DecisionResult>();
+  let revealed = new Set<string>();
   const pendingIO = new Set<Element>();
   const pendingTasks = new Set<Promise<unknown>>();
   const discoverQueue = new Set<ParentNode>();
@@ -64,13 +69,14 @@ export function createController(deps: ControllerDeps): Controller {
 
   const handlers: RenderHandlers = {
     ruleTitle: (id) => policy?.rules.find((r) => r.id === id)?.title ?? id,
+    onReveal: (s) => revealed.add(scheduleKey(s.postId, s.contentHash)),
     onKeep: deps.onKeep,
     onCorrect: deps.onCorrect,
   };
 
   function currentKey(node: Element): string | null {
     const info = nodeInfo.get(node);
-    if (!info) return null;
+    if (!info || info.key === "") return null;
     return adapter.fingerprint(node) === info.fingerprint ? info.key : null;
   }
 
@@ -80,7 +86,11 @@ export function createController(deps: ControllerDeps): Controller {
     classify: (snapshot) => deps.classify(snapshot, state.policyRevision),
     currentKey,
     currentPolicyRevision: () => state.policyRevision,
-    render: (node, result) => adapter.render(node, result, handlers),
+    render: (node, result) => {
+      const key = currentKey(node);
+      if (key) results.set(key, result);
+      adapter.render(node, result, handlers);
+    },
     onError: (e) => log("classify error", e),
   });
 
@@ -92,17 +102,25 @@ export function createController(deps: ControllerDeps): Controller {
   function scheduleNode(node: Element, priority: number): void {
     if (!state.enabled || stopped || known.has(node)) return;
     known.add(node);
+    // Record the fingerprint synchronously (empty for skeletons) so the
+    // MutationObserver can detect content arriving or a recycle even while
+    // the async extract is still in flight.
+    nodeInfo.set(node, { key: "", fingerprint: adapter.fingerprint(node) ?? "" });
     track(adapter.extract(node))
       .then((snapshot) => {
         if (!snapshot) return;
         const key = scheduleKey(snapshot.postId, snapshot.contentHash);
-        nodeInfo.set(node, {
-          key,
-          fingerprint:
-            adapter.fingerprint(node) ??
-            `${snapshot.postId}\u0000${snapshot.text}\u0000${snapshot.quoteText ?? ""}`,
-        });
-        scheduler.enqueue({ key, snapshot, node, priority });
+        // Keep the fingerprint recorded at schedule time; only set the key.
+        const info = nodeInfo.get(node);
+        if (info) info.key = key;
+        if (revealed.has(key)) return; // user made it visible: leave it
+        const cached = results.get(key);
+        if (cached) {
+          // Re-inserted copy of a post we already decided: render directly.
+          adapter.render(node, cached, handlers);
+        } else {
+          scheduler.enqueue({ key, snapshot, node, priority });
+        }
       })
       .catch((e) => log("extract error", e));
   }
@@ -196,7 +214,8 @@ export function createController(deps: ControllerDeps): Controller {
       );
       if (post) {
         const info = nodeInfo.get(post);
-        if (info && adapter.fingerprint(post) !== info.fingerprint) {
+        // `?? ""` keeps skeleton nodes (no postId yet) from looking "changed".
+        if (info && (adapter.fingerprint(post) ?? "") !== info.fingerprint) {
           recycle(post);
         }
       }
@@ -245,6 +264,8 @@ export function createController(deps: ControllerDeps): Controller {
         }
         known = new WeakSet();
         nodeInfo = new WeakMap();
+        results = new Map();
+        revealed = new Set();
         if (state.enabled) scanAll();
       }
       if (b.data.type === "POLICY_CHANGED") {
@@ -253,6 +274,8 @@ export function createController(deps: ControllerDeps): Controller {
         restoreAll();
         known = new WeakSet();
         nodeInfo = new WeakMap();
+        results = new Map();
+        revealed = new Set();
         void track(deps.getPolicy()).then((p) => {
           if (p) policy = p;
           scanAll();
