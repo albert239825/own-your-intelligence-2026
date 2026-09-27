@@ -37,6 +37,8 @@ export const PolicySchema = z.object({
   revision: z.number().int().nonnegative(),
   rules: z.array(RuleSchema),
   customInstruction: z.string().optional(),
+  /** Hide threshold for the synthetic `custom` rule; defaults to 0.85. */
+  customThreshold: z.number().min(0).max(1).optional(),
 });
 export type Policy = z.infer<typeof PolicySchema>;
 
@@ -178,3 +180,4 @@ export const DEFAULT_POLICY: Policy = {
 };
 
 export const CUSTOM_RULE_ID = "custom";
+export const DEFAULT_CUSTOM_THRESHOLD = 0.85;

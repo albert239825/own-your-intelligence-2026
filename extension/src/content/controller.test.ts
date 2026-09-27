@@ -5,9 +5,15 @@ import { createController, type Controller } from "./controller";
 import { xAdapter } from "./x-adapter";
 import { fakeClassify, makeAppTweet, makeResult } from "./test-utils";
 
-const policy = (revision: number): Policy => ({ ...DEFAULT_POLICY, revision });
+const policy = (revision: number, extra: Partial<Policy> = {}): Policy => ({
+  ...DEFAULT_POLICY,
+  ...extra,
+  revision,
+});
 
-function setup(opts: { enabled?: boolean; policyRevision?: number } = {}) {
+function setup(
+  opts: { enabled?: boolean; policyRevision?: number; customInstruction?: string } = {},
+) {
   const fc = fakeClassify();
   const onKeep = vi.fn();
   const onCorrect = vi.fn();
@@ -16,7 +22,12 @@ function setup(opts: { enabled?: boolean; policyRevision?: number } = {}) {
   const controller = createController({
     adapter: xAdapter,
     classify: fc.classify,
-    getPolicy: () => Promise.resolve(policy(opts.policyRevision ?? 1)),
+    getPolicy: () =>
+      Promise.resolve(
+        policy(opts.policyRevision ?? 1, {
+          customInstruction: opts.customInstruction,
+        }),
+      ),
     getEnabled: () => Promise.resolve(opts.enabled ?? true),
     onKeep,
     onCorrect,
@@ -443,6 +454,44 @@ describe("controller", () => {
     good.click();
     expect(onKeep).toHaveBeenCalledTimes(1);
     expect(onCorrect).toHaveBeenCalledTimes(1);
+    controller.stop();
+  });
+
+  it("Change the filter on a custom-rule hide edits customInstruction/customThreshold", async () => {
+    const { fc, controller, onSavePolicy, onCorrect } = setup({
+      policyRevision: 2,
+      customInstruction: "less crypto",
+    });
+    const t = makeAppTweet({ id: "1300", text: "crypto post" });
+    await startWith(controller, [t]);
+    fc.resolve("1300", "hide", 2, ["custom"]);
+    await controller.idle();
+
+    bar(t).click();
+    const change = chip(t, "Change the filter");
+    expect(change.hidden).toBe(false);
+    change.click();
+    const panel = t.querySelector<HTMLElement>(".af-panel")!;
+    expect(panel.hidden).toBe(false);
+    const ta = panel.querySelector<HTMLTextAreaElement>("textarea")!;
+    expect(ta.value).toBe("less crypto");
+    ta.value = "no crypto at all";
+    const slider = panel.querySelector<HTMLInputElement>("input[type=range]")!;
+    slider.value = "0.6";
+    slider.dispatchEvent(new Event("input", { bubbles: true }));
+    [...panel.querySelectorAll("button")].find((b) => b.textContent === "Save")!.click();
+
+    expect(onSavePolicy).toHaveBeenCalledTimes(1);
+    const next = onSavePolicy.mock.calls[0]![0];
+    expect(next.revision).toBe(3);
+    expect(next.customInstruction).toBe("no crypto at all");
+    expect(next.customThreshold).toBeCloseTo(0.6);
+    // Named rules are untouched.
+    expect(next.rules).toEqual(expect.arrayContaining(DEFAULT_POLICY.rules.map((r) => expect.objectContaining({ id: r.id }))));
+    expect(onCorrect.mock.calls[0]![0]).toMatchObject({
+      kind: "change_preference",
+      ruleId: "custom",
+    });
     controller.stop();
   });
 

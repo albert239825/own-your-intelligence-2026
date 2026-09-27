@@ -83,6 +83,17 @@ describe("buildTrainingRecords", () => {
     expect(recs.find((r) => r.meta.ruleId === "rage_bait")!.meta.modelProb).toBeUndefined();
   });
 
+  it("confirm_show also labels the custom rule when customInstruction is set", () => {
+    const policy = { ...DEFAULT_POLICY, customInstruction: "less crypto" };
+    const recs = buildTrainingRecords(policy, [
+      fb({ kind: "confirm_show", desiredAction: "keep" }),
+    ]);
+    expect(recs.length).toBe(HIDE_RULE_COUNT + 1);
+    const custom = recs.find((r) => r.meta.ruleId === "custom")!;
+    expect(custom.label).toBe(0);
+    expect(custom.question.instructions.rule).toBe("less crypto");
+  });
+
   it("change_preference -> no records", () => {
     expect(
       buildTrainingRecords(DEFAULT_POLICY, [

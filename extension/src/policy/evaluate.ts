@@ -1,5 +1,5 @@
 import type { Disposition, Override, Policy, PostSnapshot, Rule } from "../contracts";
-import { CUSTOM_RULE_ID } from "../contracts";
+import { CUSTOM_RULE_ID, DEFAULT_CUSTOM_THRESHOLD } from "../contracts";
 
 export const EXCEPTION_KEEP = 0.7;
 export const EXCEPTION_UNCERTAIN = 0.3;
@@ -38,7 +38,7 @@ export function hideRules(policy: Policy): Rule[] {
       title: "Your custom filter",
       instruction: policy.customInstruction,
       enabled: true,
-      hideThreshold: 0.85,
+      hideThreshold: policy.customThreshold ?? DEFAULT_CUSTOM_THRESHOLD,
       exceptionRuleIds: [],
     });
   }

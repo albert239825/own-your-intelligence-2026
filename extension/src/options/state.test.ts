@@ -24,6 +24,24 @@ describe("nextPolicy", () => {
     expect(next.customInstruction).toBeUndefined();
   });
 
+  it("carries customThreshold only when customInstruction is non-empty", () => {
+    const withCustom = nextPolicy(DEFAULT_POLICY, {
+      rules: DEFAULT_POLICY.rules,
+      customInstruction: "less crypto",
+      customThreshold: 0.6,
+    });
+    expect(withCustom.customInstruction).toBe("less crypto");
+    expect(withCustom.customThreshold).toBe(0.6);
+
+    const without = nextPolicy(DEFAULT_POLICY, {
+      rules: DEFAULT_POLICY.rules,
+      customInstruction: "   ",
+      customThreshold: 0.6,
+    });
+    expect(without.customInstruction).toBeUndefined();
+    expect(without.customThreshold).toBeUndefined();
+  });
+
   it("throws when a rule instruction is empty", () => {
     const rules = DEFAULT_POLICY.rules.map((r) =>
       r.id === "rage_bait" ? { ...r, instruction: "" } : r,
