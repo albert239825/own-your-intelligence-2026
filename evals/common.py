@@ -101,6 +101,63 @@ def evaluate(p: dict[str, float]) -> str:
     return "uncertain" if uncertain else "show"
 
 
+FIRE_THRESHOLDS = {**HIDE_THRESHOLDS, "substantive_critique": EXCEPTION_KEEP}
+
+
+def prf(tp: int, fp: int, fn: int) -> tuple[float | None, float | None]:
+    precision = tp / (tp + fp) if tp + fp else None
+    recall = tp / (tp + fn) if tp + fn else None
+    return precision, recall
+
+
+def summarize(rows: list[dict]) -> dict:
+    """Quality metrics over run_quality-shaped rows ({expected,
+    expected_disposition, probabilities, disposition}). A rule fires at its
+    FIRE_THRESHOLDS level (substantive_critique at the exception-keep level)."""
+    per_rule = {}
+    for rid in ALL_RULES:
+        t = FIRE_THRESHOLDS[rid]
+        tp = sum(1 for r in rows if r["expected"][rid] and r["probabilities"][rid] >= t)
+        fp = sum(1 for r in rows if not r["expected"][rid] and r["probabilities"][rid] >= t)
+        fn = sum(1 for r in rows if r["expected"][rid] and r["probabilities"][rid] < t)
+        p, rc = prf(tp, fp, fn)
+        pos = [r["probabilities"][rid] for r in rows if r["expected"][rid]]
+        neg = [r["probabilities"][rid] for r in rows if not r["expected"][rid]]
+        per_rule[rid] = {
+            "threshold": t,
+            "tp": tp,
+            "fp": fp,
+            "fn": fn,
+            "precision": p,
+            "recall": rc,
+            "min_positive": min(pos) if pos else None,
+            "max_negative": max(neg) if neg else None,
+        }
+
+    hid = [r for r in rows if r["disposition"] == "hide"]
+    tp = sum(1 for r in hid if r["expected_disposition"] == "hide")
+    fp = len(hid) - tp
+    fn = sum(1 for r in rows if r["expected_disposition"] == "hide" and r["disposition"] != "hide")
+    hide_p, hide_r = prf(tp, fp, fn)
+
+    critiques = [r for r in rows if r["expected_disposition"] == "show" and r["expected"]["substantive_critique"]]
+    retained = sum(1 for r in critiques if r["disposition"] != "hide")
+    agree = sum(1 for r in rows if r["disposition"] == r["expected_disposition"])
+
+    return {
+        "n": len(rows),
+        "per_rule": per_rule,
+        "hide": {"precision": hide_p, "recall": hide_r, "tp": tp, "fp": fp, "fn": fn},
+        "disagreement_retention": {
+            "value": retained / len(critiques) if critiques else None,
+            "retained": retained,
+            "total": len(critiques),
+        },
+        "disposition_agreement": agree / len(rows) if rows else None,
+        "uncertain": sum(1 for r in rows if r["disposition"] == "uncertain"),
+    }
+
+
 class Backend:
     """`answer(body) -> (probabilities, server_latency_ms)`."""
 

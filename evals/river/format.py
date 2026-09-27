@@ -63,6 +63,16 @@ def _rules_for_export(export: dict, rules: dict[str, str] | None) -> dict[str, s
     return out
 
 
+def _order(v) -> tuple:
+    """Type-safe ordering key for createdAt: numbers and numeric strings sort
+    together before anything else (extension uses ms epoch ints; old exports
+    used ISO strings)."""
+    try:
+        return (0, float(v))
+    except (TypeError, ValueError):
+        return (1, str(v))
+
+
 def records_from_export(export: dict, rules: dict[str, str] | None = None) -> tuple[list[dict], dict]:
     """(records, stats) from a feedback export. Dedupe by (post_id, rule_id),
     latest createdAt wins across feedback and overrides."""
@@ -70,16 +80,17 @@ def records_from_export(export: dict, rules: dict[str, str] | None = None) -> tu
     posts = export.get("posts") or {}
     stats = {"feedback": 0, "overrides": 0, "skipped_no_rule": 0, "skipped_no_post": 0, "skipped_unattributed": 0, "deduped": 0}
 
-    # (post_id, rule_id) -> (createdAt, record)
-    best: dict[tuple[str, str], tuple[str, dict]] = {}
+    # (post_id, rule_id) -> (createdAt order key, record)
+    best: dict[tuple[str, str], tuple[tuple, dict]] = {}
 
-    def put(post_id: str, rid: str, source: str, created_at: str, rec: dict) -> None:
+    def put(post_id: str, rid: str, source: str, created_at, rec: dict) -> None:
         key = (post_id, rid)
+        order = _order(created_at)
         if key in best:
             stats["deduped"] += 1
-            if created_at <= best[key][0]:
+            if order <= best[key][0]:
                 return
-        best[key] = (created_at, rec)
+        best[key] = (order, rec)
 
     for fb in export.get("feedback") or []:
         rid = fb.get("ruleId")
