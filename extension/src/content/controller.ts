@@ -24,6 +24,8 @@ export interface ControllerDeps {
   doc?: Document; // default document
   win?: Window; // default window
   log?: (...a: unknown[]) => void;
+  /** Verbose pipeline trace (discover/IO/extract/classify); no-op by default. */
+  debug?: (...a: unknown[]) => void;
 }
 
 export interface Controller {
@@ -45,6 +47,7 @@ export function createController(deps: ControllerDeps): Controller {
   const win = deps.win ?? window;
   const log = deps.log ?? ((...a: unknown[]) => console.warn("[af]", ...a));
   const adapter = deps.adapter;
+  const debug = deps.debug ?? (() => {});
 
   const state = { enabled: true, policyRevision: 0 };
   let policy: Policy | undefined;
@@ -97,6 +100,7 @@ export function createController(deps: ControllerDeps): Controller {
     currentKey,
     currentPolicyRevision: () => state.policyRevision,
     render: (node, result) => {
+      debug("result", result.postId, result.disposition, result.causeRuleIds);
       const key = currentKey(node);
       if (key) results.set(key, result);
       adapter.render(node, result, handlers);
@@ -118,6 +122,7 @@ export function createController(deps: ControllerDeps): Controller {
     nodeInfo.set(node, { key: "", fingerprint: adapter.fingerprint(node) ?? "" });
     track(adapter.extract(node))
       .then((snapshot) => {
+        debug("extract", snapshot ? `${snapshot.postId} len=${snapshot.text.length}` : null);
         if (!snapshot) return;
         const key = scheduleKey(snapshot.postId, snapshot.contentHash);
         // Keep the fingerprint recorded at schedule time; only set the key.
@@ -154,6 +159,7 @@ export function createController(deps: ControllerDeps): Controller {
           (entries) => {
             for (const e of entries) {
               if (e.isIntersecting && pendingIO.has(e.target)) {
+                debug("visible", e.target);
                 pendingIO.delete(e.target);
                 io!.unobserve(e.target);
                 scheduleNode(e.target, priorityFor(e.target));
@@ -185,7 +191,9 @@ export function createController(deps: ControllerDeps): Controller {
     raf(() => {
       discoveryScheduled = false;
       for (const r of discoverQueue) {
-        for (const node of adapter.discover(r)) enqueueNode(node);
+        const found = adapter.discover(r);
+        if (found.length) debug("discover", found.length);
+        for (const node of found) enqueueNode(node);
       }
       discoverQueue.clear();
     });
@@ -202,6 +210,7 @@ export function createController(deps: ControllerDeps): Controller {
 
   /** X recycled this article for a different post: drop + rediscover. */
   function recycle(post: Element): void {
+    debug("recycle", post);
     scheduler.cancel(post);
     restoreNode(post);
     nodeInfo.delete(post);
@@ -238,7 +247,9 @@ export function createController(deps: ControllerDeps): Controller {
   });
 
   function scanAll(): void {
-    for (const node of adapter.discover(doc)) enqueueNode(node);
+    const found = adapter.discover(doc);
+    debug("scanAll", found.length);
+    for (const node of found) enqueueNode(node);
   }
 
   function restoreAll(): void {
@@ -257,6 +268,7 @@ export function createController(deps: ControllerDeps): Controller {
         state.policyRevision = p.revision;
       }
       state.enabled = e ?? true;
+      debug("start", { enabled: state.enabled, policyRevision: state.policyRevision, hasPolicy: !!p, io: !!io });
       if (state.enabled) scanAll();
       // Always observe: toggling enabled later must see the live DOM, and a
       // page that booted disabled still needs the observer running.
