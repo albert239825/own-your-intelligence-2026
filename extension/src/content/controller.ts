@@ -19,6 +19,8 @@ export interface ControllerDeps {
   getEnabled: () => Promise<boolean | undefined>;
   onKeep: RenderHandlers["onKeep"];
   onCorrect: RenderHandlers["onCorrect"];
+  onHide?: RenderHandlers["onHide"];
+  onSavePolicy?: RenderHandlers["onSavePolicy"];
   doc?: Document; // default document
   win?: Window; // default window
   log?: (...a: unknown[]) => void;
@@ -70,8 +72,16 @@ export function createController(deps: ControllerDeps): Controller {
   const handlers: RenderHandlers = {
     ruleTitle: (id) => policy?.rules.find((r) => r.id === id)?.title ?? id,
     onReveal: (s) => revealed.add(scheduleKey(s.postId, s.contentHash)),
+    onCollapse: (s, result) => {
+      const key = scheduleKey(s.postId, s.contentHash);
+      revealed.delete(key);
+      results.set(key, result);
+    },
     onKeep: deps.onKeep,
     onCorrect: deps.onCorrect,
+    onHide: deps.onHide,
+    policy: () => policy,
+    onSavePolicy: deps.onSavePolicy,
   };
 
   function currentKey(node: Element): string | null {

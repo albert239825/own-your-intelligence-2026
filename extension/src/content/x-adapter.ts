@@ -19,7 +19,7 @@ import { EXTRACTOR_VERSION, type PostSnapshot } from "../contracts";
 import {
   AF_OWNED,
   contentHash,
-  renderCollapsed,
+  renderDecision,
   restoreNode,
   type RenderHandlers,
   type SiteAdapter,
@@ -189,11 +189,7 @@ export const xAdapter: SiteAdapter = {
   render(node, result, handlers: RenderHandlers) {
     const snapshot = snapshots.get(node);
     if (!snapshot) return;
-    if (result.disposition === "hide" || result.disposition === "uncertain") {
-      renderCollapsed(node, result, snapshot, handlers);
-    } else {
-      restoreNode(node);
-    }
+    renderDecision(node, result, snapshot, handlers);
   },
 
   restore(node) {
