@@ -10,4 +10,4 @@ select = ["E", "F", "I", "B", "UP"]
 testpaths = ["services/kev", "evals"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["adapter", "common"]
+known-first-party = ["adapter", "common", "format", "prompt", "proxy"]

@@ -1,0 +1,253 @@
+{
+  "backend": "http://localhost:8091",
+  "data": "holdout.jsonl",
+  "n": 10,
+  "per_rule": {
+    "rage_bait": {
+      "threshold": 0.85,
+      "tp": 1,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "min_positive": 0.8554617397027223,
+      "max_negative": 0.18813015280323409
+    },
+    "hype": {
+      "threshold": 0.85,
+      "tp": 2,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "min_positive": 0.8797707636152315,
+      "max_negative": 0.4240218762797162
+    },
+    "engagement_farming": {
+      "threshold": 0.9,
+      "tp": 1,
+      "fp": 0,
+      "fn": 1,
+      "precision": 1.0,
+      "recall": 0.5,
+      "min_positive": 0.8898783960065032,
+      "max_negative": 0.18803196298344174
+    },
+    "substantive_critique": {
+      "threshold": 0.7,
+      "tp": 3,
+      "fp": 1,
+      "fn": 0,
+      "precision": 0.75,
+      "recall": 1.0,
+      "min_positive": 0.9193151083209851,
+      "max_negative": 0.8387226101279392
+    }
+  },
+  "hide": {
+    "precision": 1.0,
+    "recall": 0.8,
+    "tp": 4,
+    "fp": 0,
+    "fn": 1
+  },
+  "disagreement_retention": {
+    "value": 1.0,
+    "retained": 3,
+    "total": 3
+  },
+  "disposition_agreement": 0.9,
+  "uncertain": 0,
+  "rows": [
+    {
+      "id": "h-ai-hype-01",
+      "topic": "ai",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 1,
+        "engagement_farming": 0,
+        "substantive_critique": 0
+      },
+      "expected_disposition": "hide",
+      "probabilities": {
+        "rage_bait": 0.14178829373358676,
+        "hype": 0.8797707636152315,
+        "engagement_farming": 0.0248273651113037,
+        "substantive_critique": 0.17467983950707847
+      },
+      "disposition": "hide",
+      "latency_ms": 2608.5464540000203
+    },
+    {
+      "id": "h-ai-critique-01",
+      "topic": "ai",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 0,
+        "engagement_farming": 0,
+        "substantive_critique": 1
+      },
+      "expected_disposition": "show",
+      "probabilities": {
+        "rage_bait": 0.011559632992120747,
+        "hype": 0.05729630796984681,
+        "engagement_farming": 0.006948849705782003,
+        "substantive_critique": 0.9669149873041988
+      },
+      "disposition": "show",
+      "latency_ms": 2027.3710349999874
+    },
+    {
+      "id": "h-pol-rage-01",
+      "topic": "politics",
+      "expected": {
+        "rage_bait": 1,
+        "hype": 0,
+        "engagement_farming": 0,
+        "substantive_critique": 0
+      },
+      "expected_disposition": "hide",
+      "probabilities": {
+        "rage_bait": 0.8554617397027223,
+        "hype": 0.08079012884383356,
+        "engagement_farming": 0.02728884161032772,
+        "substantive_critique": 0.031096539663115152
+      },
+      "disposition": "hide",
+      "latency_ms": 1659.1249680000146
+    },
+    {
+      "id": "h-pol-disagree-01",
+      "topic": "politics",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 0,
+        "engagement_farming": 0,
+        "substantive_critique": 1
+      },
+      "expected_disposition": "show",
+      "probabilities": {
+        "rage_bait": 0.006996971530862733,
+        "hype": 0.03836403453404584,
+        "engagement_farming": 0.007649476429376073,
+        "substantive_critique": 0.9487685840770763
+      },
+      "disposition": "show",
+      "latency_ms": 1806.8193280000742
+    },
+    {
+      "id": "h-prod-hype-01",
+      "topic": "product",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 1,
+        "engagement_farming": 0,
+        "substantive_critique": 0
+      },
+      "expected_disposition": "hide",
+      "probabilities": {
+        "rage_bait": 0.02400357613943857,
+        "hype": 0.9677998821339642,
+        "engagement_farming": 0.18803196298344174,
+        "substantive_critique": 0.06837975251303481
+      },
+      "disposition": "hide",
+      "latency_ms": 1536.6879319999498
+    },
+    {
+      "id": "h-prod-bench-01",
+      "topic": "product",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 0,
+        "engagement_farming": 0,
+        "substantive_critique": 1
+      },
+      "expected_disposition": "show",
+      "probabilities": {
+        "rage_bait": 0.010397505299688211,
+        "hype": 0.10197082594481839,
+        "engagement_farming": 0.015057046652924486,
+        "substantive_critique": 0.9193151083209851
+      },
+      "disposition": "show",
+      "latency_ms": 1743.018713999959
+    },
+    {
+      "id": "h-farm-01",
+      "topic": "farming",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 0,
+        "engagement_farming": 1,
+        "substantive_critique": 0
+      },
+      "expected_disposition": "hide",
+      "probabilities": {
+        "rage_bait": 0.020643892071985512,
+        "hype": 0.24242200928331792,
+        "engagement_farming": 0.9184836585266506,
+        "substantive_critique": 0.024710267158797174
+      },
+      "disposition": "hide",
+      "latency_ms": 1366.9557699998904
+    },
+    {
+      "id": "h-farm-02",
+      "topic": "farming",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 0,
+        "engagement_farming": 1,
+        "substantive_critique": 0
+      },
+      "expected_disposition": "hide",
+      "probabilities": {
+        "rage_bait": 0.18813015280323409,
+        "hype": 0.4240218762797162,
+        "engagement_farming": 0.8898783960065032,
+        "substantive_critique": 0.35887366781551683
+      },
+      "disposition": "show",
+      "latency_ms": 1661.9627790000777
+    },
+    {
+      "id": "h-neutral-01",
+      "topic": "control",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 0,
+        "engagement_farming": 0,
+        "substantive_critique": 0
+      },
+      "expected_disposition": "show",
+      "probabilities": {
+        "rage_bait": 0.004226245296204119,
+        "hype": 0.004991454792466458,
+        "engagement_farming": 0.0037047686213743805,
+        "substantive_critique": 0.021758806202963242
+      },
+      "disposition": "show",
+      "latency_ms": 1671.6783030000215
+    },
+    {
+      "id": "h-neutral-02",
+      "topic": "control",
+      "expected": {
+        "rage_bait": 0,
+        "hype": 0,
+        "engagement_farming": 0,
+        "substantive_critique": 0
+      },
+      "expected_disposition": "show",
+      "probabilities": {
+        "rage_bait": 0.0026956237665680997,
+        "hype": 0.022476534950193024,
+        "engagement_farming": 0.012711000314464524,
+        "substantive_critique": 0.8387226101279392
+      },
+      "disposition": "show",
+      "latency_ms": 1613.0835180000531
+    }
+  ]
+}

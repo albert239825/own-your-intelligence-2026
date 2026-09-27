@@ -131,3 +131,14 @@ no false hides, every expected-show critique retained. The weakest margin is
 still rage_bait on dev (min+ 0.76 vs thr 0.70) — worth watching as posts are
 added. Results: `results/quality-20260927T215524Z.json`,
 `results/quality-20260927T215528Z.json`.
+
+## River
+
+The same harnesses were run unchanged against the River proxy
+(`services/river/`, `--endpoint http://localhost:8080`): holdout quality for the
+Qwen3.5-9B base model and the `af-v1` LoRA fine-tune, a 1/8/30-concurrency
+burst, and a full Kev-vs-River comparison. See `services/river/README.md` for
+the tables; raw runs are `results/quality-20260927T215944Z.json` (River base),
+`results/quality-20260927T220011Z.json` (River tuned af-v1) and
+`results/burst-20260927T220344Z.json` (River base burst). `evals/river/` holds
+the SFT data formatter (`format.py`) and the LoRA fine-tune script (`sft.py`).

@@ -1,0 +1,11 @@
+# Deploy-side (your laptop): the Modal CLI plus what proxy.py imports locally for tests.
+# Inside the container, deploy.py installs river-client/fastapi/pydantic itself.
+river-client==0.11.0
+fastapi==0.141.1
+pydantic==2.13.5
+httpx==0.28.1
+uvicorn==0.53.0
+modal==1.5.5
+pytest==9.1.1
+pytest-asyncio==1.4.0
+ruff==0.16.8
