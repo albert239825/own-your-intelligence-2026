@@ -94,3 +94,14 @@ worker hop and tab scheduling. A first attempt at the 8-level right after
 deploy saw server p95 of 1.6 s (new batch shapes compiling) and one 30-level
 request hit the client's 120 s read timeout while the server logged all 200s;
 the run above is the repeat a minute later.
+
+## River
+
+The same harnesses were run unchanged against the River proxy
+(`services/river/`, `--endpoint http://localhost:8080`): holdout quality for the
+Qwen3.5-9B base model and the `af-v1` LoRA fine-tune, a 1/8/30-concurrency
+burst, and a full Kev-vs-River comparison. See `services/river/README.md` for
+the tables; raw runs are `results/quality-20260927T215944Z.json` (River base),
+`results/quality-20260927T220011Z.json` (River tuned af-v1) and
+`results/burst-20260927T220344Z.json` (River base burst). `evals/river/` holds
+the SFT data formatter (`format.py`) and the LoRA fine-tune script (`sft.py`).
