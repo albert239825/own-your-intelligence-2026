@@ -93,7 +93,7 @@ function release() {
 }
 
 function pickClassifier(settings: Settings) {
-  return settings.classifier === "kev" && settings.endpoint
+  return settings.classifier === "kev"
     ? new KevClassifier({ endpoint: settings.endpoint, token: settings.token })
     : mock;
 }
