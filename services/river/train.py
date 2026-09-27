@@ -38,6 +38,13 @@ from common import ALL_RULES, RULES, TASK_INSTRUCTION, Record, evaluate, summari
 STATUSES = ("queued", "training", "evaluating", "promoted", "rejected", "failed")
 
 
+def eval_posts(name: str) -> list[Record]:
+    """Ground-truth posts shipped with the repo: "posts" (seed) or "holdout"."""
+    from common import load_jsonl
+
+    return load_jsonl(EVALS_DIR / f"{name}.jsonl")
+
+
 class TrainBudgetExceeded(RuntimeError):
     """Raised when a run exceeds TrainConfig.max_minutes of session time."""
 
@@ -222,7 +229,7 @@ def now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
 
-def new_job(job_id: str, dataset: dict, cfg: TrainConfig) -> dict:
+def new_job(job_id: str, dataset: dict, cfg: TrainConfig | None = None) -> dict:
     return {
         "id": job_id,
         "status": "queued",
@@ -230,7 +237,7 @@ def new_job(job_id: str, dataset: dict, cfg: TrainConfig) -> dict:
         "updated_at": now(),
         "name": f"af-{job_id}",
         "dataset": dataset,
-        "config": asdict(cfg),
+        "config": asdict(cfg) if cfg else None,
         "train": None,
         "eval": None,
         "gate": None,
@@ -255,6 +262,7 @@ def run_job(
     records, dataset = aggregate(bundle, seed)
     job = store.get(job_id) or new_job(job_id, dataset, cfg)
     job["dataset"] = dataset
+    job["config"] = asdict(cfg)
 
     def save(status: str, **fields) -> None:
         job.update(status=status, updated_at=now(), **fields)

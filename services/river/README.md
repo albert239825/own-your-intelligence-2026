@@ -150,14 +150,41 @@ endpoint field = that URL, token = `KEV_TOKEN`; no extension change needed.
 | `RIVER_TIMEOUT_S` | `20` | per-request upstream + gRPC timeout |
 | `PORT` | `8080` | local uvicorn port |
 
-**Fine-tune on your corrections:**
+**Fine-tune on your corrections (CLI path):**
 
 ```bash
-# export feedback JSON from the extension, then
-python ../../evals/river/format.py --export export.json --out sft-feedback.jsonl
-python ../../evals/river/sft.py --data sft-feedback.jsonl --name <n>
+# export bundle JSON from the extension, then
+python ../../evals/river/aggregate.py --bundle export.json --out sft.jsonl   # + seed posts.jsonl
+python ../../evals/river/sft.py --data sft.jsonl --name <n>
 RIVER_CHECKPOINT=river://<session>/sampler_weights/<n> modal deploy deploy.py
 ```
+
+**Fine-tune from the extension (one click, `/v1/train`):** the deployed proxy
+mounts the job API backed by the `attention-filter-river-jobs` modal.Dict, so
+the extension never handles the River key or SFT records — it POSTs its export
+bundle and polls.
+
+```bash
+API=https://albert23982--attention-filter-river-api.modal.run
+H="authorization: Bearer $KEV_TOKEN"
+curl -sH "$H" -H 'content-type: application/json' -d @export.json $API/v1/train   # 202 {job_id, dataset}
+curl -sH "$H" $API/v1/train/<job_id>        # full record incl. eval rows
+curl -sH "$H" $API/v1/train                 # history, newest first, rows stripped
+curl -sH "$H" -XPOST $API/v1/train/<job_id>/promote    # manual promote / rollback
+curl -sH "$H" -XPOST $API/v1/model/reset               # back to the base model
+curl -sH "$H" $API/v1/model                            # active checkpoint + model_version
+```
+
+The job (`train.py::run_job`) aggregates the bundle plus the 30 seed posts,
+runs the LoRA SFT, scores base vs. tuned on `holdout.jsonl` with
+`run_quality.py`'s metrics, and **auto-promotes only if the gate passes** —
+tuned must not be worse than base on disposition agreement, hide precision or
+disagreement retention. A rejected job keeps its checkpoint (promotable by
+hand) but keeps serving the old one. Promotion writes `active` into the Dict;
+proxy containers re-read it every 5 s, so `/health`, `/v1/model` and the
+`model_version` on `/v1/systemone` answers flip without a redeploy. Guards:
+≥20 user labels (400 otherwise, with the stats), one job at a time (409),
+503 when a deployment has no training wired.
 
 `evals/run_quality.py` and `evals/run_burst.py` work unchanged against the
 proxy (`--endpoint http://localhost:8080`, token via `--token-file` or
