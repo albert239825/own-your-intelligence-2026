@@ -273,6 +273,13 @@ chrome.runtime.onMessage.addListener((raw: unknown, _sender, sendResponse) => {
         await appendFeedback(msg.feedback);
         sendResponse({ ok: true });
         break;
+      case "DELETE_FEEDBACK":
+        await withStore(async () => {
+          const list = (await storeGet<Feedback[]>("feedback")) ?? [];
+          await storeSet({ feedback: list.filter((f) => f.feedbackId !== msg.feedbackId) });
+        });
+        sendResponse({ ok: true });
+        break;
       case "GET_HISTORY":
         sendResponse({ ok: true, history: await getHistory() });
         break;

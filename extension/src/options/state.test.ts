@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_POLICY, type DecisionResult, type Policy } from "../contracts";
+import { DEFAULT_POLICY, type DecisionResult, type Feedback, type Policy } from "../contracts";
 import { hideRules } from "../policy/evaluate";
 import {
   applyAggressiveness,
@@ -9,6 +9,7 @@ import {
   joinCustomInstruction,
   nextPolicy,
   parseImport,
+  actionRows,
   previewExamples,
   reviewRows,
   splitCustomInstruction,
@@ -227,5 +228,45 @@ describe("historyCounts / reviewRows", () => {
     const rows = reviewRows(history, DEFAULT_POLICY);
     expect(rows.map((r) => r.result.requestId)).toEqual(["new", "r4"]);
     expect(rows[0]!.causeTitles).toEqual(["Hype"]);
+  });
+});
+
+describe("actionRows", () => {
+  const fb = (over: Partial<Feedback>): Feedback => ({
+    feedbackId: "f1",
+    postId: "p1",
+    contentHash: "h",
+    text: "post text",
+    kind: "confirm_hide",
+    desiredAction: "hide",
+    policyRevision: 3,
+    createdAt: 100,
+    ...over,
+  });
+
+  it("maps each kind to badge, tone, and trainable", () => {
+    const rows = actionRows([
+      fb({ feedbackId: "a", kind: "wrong_classification", desiredAction: "hide", ruleId: "rage_bait" }),
+      fb({ feedbackId: "b", kind: "wrong_classification", desiredAction: "keep", ruleId: "hype" }),
+      fb({ feedbackId: "c", kind: "confirm_hide", ruleId: "rage_bait" }),
+      fb({ feedbackId: "d", kind: "confirm_show" }),
+      fb({ feedbackId: "e", kind: "change_preference" }),
+    ], DEFAULT_POLICY);
+    const by = Object.fromEntries(rows.map((r) => [r.feedback.feedbackId, r]));
+    expect(by.a).toMatchObject({ badge: "Hidden by you", tone: "hide", trainable: true, ruleTitle: "Rage bait" });
+    expect(by.b).toMatchObject({ badge: "Kept (was hidden)", tone: "show", trainable: true, ruleTitle: "Hype" });
+    expect(by.c).toMatchObject({ badge: "Good call (hidden)", tone: "hide", trainable: true });
+    expect(by.d).toMatchObject({ badge: "Good (kept)", tone: "show", trainable: true, ruleTitle: undefined });
+    expect(by.e).toMatchObject({ badge: "Filter changed", tone: "uncertain", trainable: false });
+  });
+
+  it("sorts by createdAt newest first and titles the custom rule", () => {
+    const rows = actionRows([
+      fb({ feedbackId: "old", createdAt: 10 }),
+      fb({ feedbackId: "new", kind: "confirm_show", createdAt: 30 }),
+      fb({ feedbackId: "mid", kind: "wrong_classification", desiredAction: "hide", ruleId: "custom", createdAt: 20 }),
+    ], DEFAULT_POLICY);
+    expect(rows.map((r) => r.feedback.feedbackId)).toEqual(["new", "mid", "old"]);
+    expect(rows[1]!.ruleTitle).toBe("Your custom filter");
   });
 });
