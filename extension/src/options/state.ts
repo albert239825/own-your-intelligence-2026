@@ -9,6 +9,7 @@ import {
   type DecisionResult,
   type Disposition,
   type Feedback,
+  type HistoryEntry,
   type Override,
   type Policy,
   type PostSnapshot,
@@ -235,6 +236,7 @@ export interface ExportBundle {
   policy: Policy;
   feedback: Feedback[];
   overrides: Record<string, Override>;
+  history?: HistoryEntry[];
 }
 
 /** Never includes token/endpoint — those live in settings, not the bundle. */
@@ -242,12 +244,14 @@ export function buildExport(
   policy: Policy,
   feedback: Feedback[],
   overrides: Record<string, Override>,
+  history?: HistoryEntry[],
 ): ExportBundle {
   return {
     exportedAt: new Date().toISOString(),
     policy,
     feedback,
     overrides,
+    ...(history ? { history } : {}),
   };
 }
 
@@ -359,6 +363,48 @@ export function reviewRows(history: DecisionResult[], policy: Policy): ReviewRow
     });
   }
   return rows;
+}
+
+export interface ActionRow {
+  feedback: Feedback;
+  badge: string;
+  tone: "hide" | "show" | "uncertain";
+  ruleTitle?: string;
+  trainable: boolean;
+}
+
+/** One card per explicit user action (the fine-tune dataset), newest first. */
+export function actionRows(feedback: Feedback[], policy: Policy): ActionRow[] {
+  const rows = feedback.map((fb) => {
+    let badge: string;
+    let tone: ActionRow["tone"];
+    switch (fb.kind) {
+      case "wrong_classification":
+        badge = fb.desiredAction === "hide" ? "Hidden by you" : "Kept (was hidden)";
+        tone = fb.desiredAction === "hide" ? "hide" : "show";
+        break;
+      case "confirm_hide":
+        badge = "Good call (hidden)";
+        tone = "hide";
+        break;
+      case "confirm_show":
+        badge = "Good (kept)";
+        tone = "show";
+        break;
+      case "change_preference":
+        badge = "Filter changed";
+        tone = "uncertain";
+        break;
+    }
+    return {
+      feedback: fb,
+      badge,
+      tone,
+      ruleTitle: fb.ruleId ? ruleTitle(policy, fb.ruleId) : undefined,
+      trainable: fb.kind !== "change_preference",
+    };
+  });
+  return rows.sort((a, b) => b.feedback.createdAt - a.feedback.createdAt);
 }
 
 export interface PromptDescription {

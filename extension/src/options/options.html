@@ -9,7 +9,7 @@
   <nav class="top">
     <h1>Attention Filter</h1>
     <a href="#settings" id="nav-settings">Settings</a>
-    <a href="#review" id="nav-review">Review hidden posts</a>
+    <a href="#review" id="nav-review">Review actioned posts</a>
     <a href="#test" id="nav-test">Test a post</a>
     <span class="spacer"></span>
     <span class="pill" id="enabled-pill">…</span>
@@ -110,15 +110,26 @@
     </section>
 
     <section id="view-review" class="view">
-      <p class="muted">Keep this post = exact override for this post only; it will be shown again on this feed. Feedback (should've / shouldn't have been hidden) is saved locally for later model tuning — it does not change the model today.</p>
+      <p class="muted">Every explicit action you take in the feed is saved here, locally. These are the examples a fine-tuned model would learn from.</p>
       <p>
         <button id="rv-refresh">Refresh</button>
-        <button id="rv-clear">Clear history</button>
+        <button id="rv-clear-feedback">Clear all actions</button>
         <button id="rv-export">Export JSON</button>
         <button id="rv-training-export">Export training data (JSONL)</button>
       </p>
+      <p id="rv-summary" class="mono muted"></p>
+      <div class="card">
+        <h3>Fine-tune the model on these actions</h3>
+        <p class="muted">Sends this bundle to your endpoint, which trains a River checkpoint and promotes it only if it beats the current model on a held-out set. Your posts leave the browser when you click this.</p>
+        <p>
+          <button id="rv-finetune">Fine-tune on these actions</button>
+          <button id="rv-job-refresh">Refresh job status</button>
+        </p>
+        <p id="rv-job-status" class="muted"></p>
+        <div id="rv-job-detail"></div>
+      </div>
       <div id="rv-list"></div>
-      <p id="rv-empty" class="muted" hidden>Nothing hidden yet. Open the fixture feed or X with filtering on.</p>
+      <p id="rv-empty" class="muted" hidden>No actions yet. Use Hide / Good on shown posts, or Keep this post / Good call on hidden ones.</p>
     </section>
 
     <section id="view-test" class="view">

@@ -116,6 +116,7 @@ export const MessageSchema = z.discriminatedUnion("type", [
   z.object({ type: z.literal("SAVE_POLICY"), policy: PolicySchema }),
   z.object({ type: z.literal("SET_OVERRIDE"), override: OverrideSchema }),
   z.object({ type: z.literal("SAVE_FEEDBACK"), feedback: FeedbackSchema }),
+  z.object({ type: z.literal("DELETE_FEEDBACK"), feedbackId: z.string() }),
   z.object({ type: z.literal("GET_HISTORY") }),
   z.object({ type: z.literal("CLEAR_HISTORY") }),
   z.object({ type: z.literal("SET_ENABLED"), enabled: z.boolean() }),

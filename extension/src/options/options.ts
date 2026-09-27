@@ -1,8 +1,8 @@
 import {
   DEFAULT_CUSTOM_THRESHOLD,
   DEFAULT_POLICY,
-  type DecisionResult,
   type Feedback,
+  type HistoryEntry,
   type Override,
   type Policy,
   type Rule,
@@ -18,13 +18,21 @@ import {
   parseImport,
   presetThreshold,
   previewExamples,
-  reviewRows,
+  actionRows,
   RULE_BLURBS,
   splitCustomInstruction,
   type Aggressiveness,
   type Settings,
 } from "./state";
 import { buildTrainingRecords, toJsonl } from "./training";
+import {
+  datasetLine,
+  getJob,
+  isTerminal,
+  jobStatusLine,
+  startTraining,
+  type TrainJob,
+} from "./finetune";
 
 function send<T>(msg: unknown): Promise<T | undefined> {
   return chrome.runtime.sendMessage(msg).then((r) => (r?.ok ? r : undefined));
@@ -568,102 +576,127 @@ async function importJson(file: File): Promise<void> {
 
 // ---- review ---------------------------------------------------------
 
-const FEEDBACK_KIND_LABEL: Record<Feedback["kind"], string> = {
-  wrong_classification: "Wrong classification",
-  change_preference: "Preference changed",
-  confirm_hide: "Confirmed",
-  confirm_show: "Kept (good)",
-};
-
 async function renderReview(): Promise<void> {
-  const [histRes, polRes, store] = await Promise.all([
-    send<{ history: DecisionResult[] }>({ type: "GET_HISTORY" }),
+  const [polRes, store] = await Promise.all([
     send<{ policy: Policy }>({ type: "GET_POLICY" }),
     chrome.storage.local.get("feedback"),
   ]);
   if (polRes?.policy) currentPolicy = polRes.policy;
-  const history = histRes?.history ?? [];
   const feedback = (store.feedback as Feedback[] | undefined) ?? [];
-  const feedbackByPost = new Map(feedback.map((f) => [f.postId, f]));
+
+  const rows = actionRows(feedback, currentPolicy);
+  const records = buildTrainingRecords(currentPolicy, feedback);
+  const pos = records.filter((r) => r.label === 1).length;
+  $("rv-summary").textContent =
+    `${feedback.length} actions → ${records.length} training examples ` +
+    `(${pos} positive · ${records.length - pos} negative)`;
 
   const host = $("rv-list");
   host.replaceChildren();
-  const rows = reviewRows(history, currentPolicy);
   $("rv-empty").toggleAttribute("hidden", rows.length > 0);
 
   for (const row of rows) {
-    const r = row.result;
+    const fb = row.feedback;
     const card = el("div", { class: "card" });
     card.append(
       el("div", {},
-        el("span", { class: "mono" }, r.postId), " ",
-        el("span", { class: `badge ${r.disposition}` }, r.disposition)),
+        el("span", { class: `badge ${row.tone}` }, row.badge),
+        ...(row.ruleTitle ? [" ", el("span", {}, row.ruleTitle)] : [])),
     );
-    if (row.causeTitles.length > 0) {
-      card.append(el("div", {}, `Rule(s): ${row.causeTitles.join(", ")}`));
+    card.append(el("p", {}, fb.text));
+    if (fb.quoteText) {
+      card.append(el("p", { class: "muted", style: "margin-left:16px" }, `↳ ${fb.quoteText}`));
     }
-    if (row.exceptionTitles.length > 0) {
-      card.append(el("div", {}, `Protected by: ${row.exceptionTitles.join(", ")}`));
+    if (fb.explanation) card.append(el("p", { class: "muted" }, fb.explanation));
+    if (fb.probabilities) {
+      const chips = el("div");
+      for (const [id, p] of Object.entries(fb.probabilities)) {
+        chips.append(el("span", { class: "chip mono" }, `${id} ${p.toFixed(2)}`));
+      }
+      card.append(chips);
     }
-    const chips = el("div");
-    for (const [id, p] of Object.entries(r.probabilities)) {
-      chips.append(el("span", { class: "chip mono" }, `${id} ${p.toFixed(2)}`));
-    }
-    card.append(chips);
     card.append(
       el("div", { class: "muted" },
-        `source ${r.source} · model ${r.modelVersion} · revision ${r.policyRevision}`),
+        `revision ${fb.policyRevision} · ${new Date(fb.createdAt).toLocaleString()}` +
+          (row.trainable ? "" : " · not used for training")),
     );
-    const fb = feedbackByPost.get(r.postId);
-    if (fb) card.append(el("span", { class: "badge uncertain" }, FEEDBACK_KIND_LABEL[fb.kind]));
-    if (fb && fb.text) card.append(el("p", {}, fb.text));
-    else card.append(el("p", { class: "muted" }, "Post text is not stored in history; open the post on X by id."));
-
-    const actions = el("div");
-    const keepBtn = el("button", {}, "Keep this post");
-    keepBtn.addEventListener("click", async () => {
-      const res = await send({
-        type: "SET_OVERRIDE",
-        override: { postId: r.postId, contentHash: r.contentHash, action: "keep", createdAt: Date.now() },
-      });
-      if (res !== undefined) {
-        keepBtn.disabled = true;
-        card.append(el("span", { class: "badge show" }, "Kept"));
-      }
+    const removeBtn = el("button", {}, "Remove");
+    removeBtn.addEventListener("click", async () => {
+      const res = await send({ type: "DELETE_FEEDBACK", feedbackId: fb.feedbackId });
+      if (res !== undefined) await renderReview();
     });
-    actions.append(keepBtn, " ");
-
-    const mkFeedback = (label: string, desired: "keep" | "hide") => {
-      const b = el("button", {}, label);
-      b.addEventListener("click", async () => {
-        const res = await send({
-          type: "SAVE_FEEDBACK",
-          feedback: {
-            feedbackId: crypto.randomUUID(),
-            postId: r.postId,
-            contentHash: r.contentHash,
-            text: "",
-            kind: "wrong_classification",
-            desiredAction: desired,
-            ruleId: r.causeRuleIds[0],
-            policyRevision: r.policyRevision,
-            createdAt: Date.now(),
-          },
-        });
-        if (res !== undefined) {
-          b.disabled = true;
-          card.append(el("span", { class: "badge uncertain" }, "Feedback saved"));
-        }
-      });
-      return b;
-    };
-    if (r.disposition === "hide") {
-      actions.append(mkFeedback("Shouldn't have been hidden", "keep"));
-    } else {
-      actions.append(mkFeedback("Should've been hidden", "hide"));
-    }
-    card.append(actions);
+    card.append(removeBtn);
     host.append(card);
+  }
+  void resumeLastJob();
+}
+
+// ---- fine-tune -----------------------------------------------------------
+
+const JOB_POLL_MS = 5000;
+let jobPollTimer: number | undefined;
+
+function renderJob(job: TrainJob): void {
+  $("rv-job-status").textContent = jobStatusLine(job);
+  const detail = $("rv-job-detail");
+  detail.replaceChildren();
+  const ds = datasetLine(job.dataset);
+  if (ds) detail.append(el("p", { class: "muted mono" }, ds));
+  if (job.checkpoint) detail.append(el("p", { class: "muted mono" }, job.checkpoint));
+}
+
+async function pollJob(jobId: string): Promise<void> {
+  window.clearTimeout(jobPollTimer);
+  const job = await getJob(settings, jobId).catch(() => undefined);
+  if (!job) {
+    $("rv-job-status").textContent = `Could not read job ${jobId}.`;
+    return;
+  }
+  renderJob(job);
+  if (!isTerminal(job.status)) {
+    jobPollTimer = window.setTimeout(() => void pollJob(jobId), JOB_POLL_MS);
+  }
+}
+
+async function startFineTune(): Promise<void> {
+  const btn = $("rv-finetune") as HTMLButtonElement;
+  const status = $("rv-job-status");
+  if (settings.classifier !== "kev" || settings.endpoint.trim().length === 0) {
+    status.textContent = "Set a model endpoint in Settings first — the mock model can't be trained.";
+    return;
+  }
+  btn.disabled = true;
+  status.textContent = "Sending your actions…";
+  const [polRes, histRes, store] = await Promise.all([
+    send<{ policy: Policy }>({ type: "GET_POLICY" }),
+    send<{ history: HistoryEntry[] }>({ type: "GET_HISTORY" }),
+    chrome.storage.local.get(["feedback", "overrides"]),
+  ]);
+  if (polRes?.policy) currentPolicy = polRes.policy;
+  const bundle = buildExport(
+    currentPolicy,
+    (store.feedback as Feedback[] | undefined) ?? [],
+    (store.overrides as Record<string, Override> | undefined) ?? {},
+    histRes?.history ?? [],
+  );
+  const res = await startTraining(settings, bundle);
+  btn.disabled = false;
+  if (!res.ok) {
+    status.textContent = res.error;
+    return;
+  }
+  await chrome.storage.local.set({ lastTrainJobId: res.jobId });
+  status.textContent = `Job ${res.jobId} queued…`;
+  $("rv-job-detail").replaceChildren(
+    ...(datasetLine(res.dataset) ? [el("p", { class: "muted mono" }, datasetLine(res.dataset))] : []),
+  );
+  void pollJob(res.jobId);
+}
+
+async function resumeLastJob(): Promise<void> {
+  const { lastTrainJobId } = await chrome.storage.local.get("lastTrainJobId");
+  if (typeof lastTrainJobId === "string" && settings.classifier === "kev") {
+    void pollJob(lastTrainJobId);
   }
 }
 
@@ -804,7 +837,10 @@ for (const id of ["ts-text", "ts-quote"]) {
   });
 }
 $("rv-refresh").addEventListener("click", () => void renderReview());
-$("rv-clear").addEventListener("click", async () => {
-  await send({ type: "CLEAR_HISTORY" });
+$("rv-finetune").addEventListener("click", () => void startFineTune());
+$("rv-job-refresh").addEventListener("click", () => void resumeLastJob());
+$("rv-clear-feedback").addEventListener("click", async () => {
+  if (!confirm("Delete all saved actions? This clears the fine-tune dataset.")) return;
+  await chrome.storage.local.set({ feedback: [] });
   await renderReview();
 });
